@@ -1,0 +1,1278 @@
+
+/* =========================================================
+   Dashboard UI — Cleaned & Organized CSS
+   Palette: green/amber on deep black, CRT vibe
+   ========================================================= */
+
+/* --------------------
+   Root variables
+-------------------- */
+:root {
+  --green: #00ff88;
+  --amber: #ffaa00;
+  --grid: #222;
+
+  /* CRT beam */
+  --beam-color: rgba(0,255,136,0.22);
+  --beam-glow:  rgba(0,255,136,0.35);
+  --beam-speed: 16s;
+  --beam-height: 4vh;
+
+  /* Layout */
+  --tabs-h: 44px;
+
+  /* Markets (defaults; can be overridden per-panel) */
+  --ticker-h: 92px;
+  --ticker-fs: 36px;
+  --ticker-gap: 42px;
+  --rate-gap: 6px;
+  --rate-fs: 22px;
+  --rate-row-pad-y: 6px;
+}
+
+/* --------------------
+   Base
+-------------------- */
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  margin: 0;
+  color: var(--green);
+  font-family: "DejaVu Sans Mono","Fira Code",monospace;
+  overflow: hidden;
+  background: radial-gradient(ellipse at center, #050505 0%, #000 100%);
+}
+
+/* --------------------
+   Tabs bar
+-------------------- */
+#tabs {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  height: var(--tabs-h);
+  padding: 6px 12px;
+  border-bottom: 1px solid #222;
+  background: #000;
+  filter: url(#goo);
+}
+
+/* Tab indicator (fills active tab) */
+#tab-indicator {
+  position: absolute;
+  top: 0; left: 0;
+  height: 100%;
+  width: 0;
+  transform: translateX(0);
+  border-radius: 10px;
+  background: var(--amber);
+  box-shadow: 0 0 14px rgba(255,170,0,0.35);
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0; /* hidden until first init */
+  transition:
+    transform .28s cubic-bezier(.22,.61,.36,1),
+    width     .28s cubic-bezier(.22,.61,.36,1),
+    opacity   .12s linear;
+}
+
+/* Bubble “hop” between tabs */
+#tab-bubble {
+  position: absolute;
+  top: 50%; left: 0;
+  width: 24px; height: 24px; margin-top: -12px;
+  border-radius: 50%;
+  background: var(--amber);
+  box-shadow: 0 0 14px rgba(255,170,0,0.35);
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0; /* visible only during animation */
+  transform: translateX(0) scale(0.8);
+}
+
+/* Brand (Bloomberg-like) */
+.brand {
+  color: var(--amber);
+  background: transparent;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  font-size: 30px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  text-shadow:
+    0 0 6px rgba(255,170,0,.50),
+    0 0 14px rgba(255,170,0,.35),
+    0 0 26px rgba(255,170,0,.25);
+  filter: drop-shadow(0 0 6px rgba(255,170,0,.25));
+  line-height: 1;
+}
+
+/* Tab badges */
+.badge {
+  position: relative;
+  padding: 6px 12px;
+  border: 1px solid var(--grid);
+  border-radius: 10px;
+  font-size: 25px;
+  color: var(--green);
+  background: transparent;
+  cursor: pointer;
+  user-select: none;
+  transition: background-color .18s ease, color .18s ease,
+              box-shadow .18s ease, border-color .18s ease, transform .12s ease;
+}
+#tabs .badge { position: relative; z-index: 1; }
+.badge:hover {
+  transform: translateY(-1px);
+  box-shadow:
+    0 0 12px rgba(255,170,0,.25) inset,
+    0 0 10px rgba(255,170,0,.25);
+  transition: box-shadow .18s ease;
+}
+.badge.active {
+  color: #000;
+  background: var(--amber);
+  border-color: var(--amber);
+  box-shadow:
+    0 0 0 1px rgba(255,170,0,0.35) inset,
+    0 0 14px rgba(255,170,0,0.35),
+    0 2px 10px rgba(0,0,0,.35);
+}
+.badge:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px #000, 0 0 0 4px rgba(255,170,0,.55);
+  border-color: var(--amber);
+  border-radius: 12px;
+}
+
+/* --------------------
+   Layout grid & panels
+-------------------- */
+.grid {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 0;
+  height: calc(100vh - var(--tabs-h));
+}
+
+.panel {
+  border: 1px solid var(--grid);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-height: 0;
+}
+.panel.compact { padding: 10px; }
+.panel.compact .row {
+  gap: 8px; margin-bottom: 6px; align-items: center; flex: 0 0 auto;
+}
+.panel.compact .badge { font-size: 18px; padding: 2px 8px; }
+
+h2 {
+  margin: 0 0 10px;
+  font-size: 28px;
+  letter-spacing: .5px;
+  color: var(--amber);
+  text-shadow: 0 0 8px #ffbb33a0;
+  flex: 0 0 auto;
+}
+
+.row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; }
+.stat, pre {
+  font-size: 26px;
+  line-height: 1.4;
+  margin: 0;
+  white-space: pre-wrap;
+  text-shadow: 0 0 6px #00ff88a0;
+}
+.chartWrap { flex: 1 1 auto; min-height: 0; }
+canvas { width: 100% !important; height: 100% !important; }
+
+/* --------------------
+   Clock & Info
+-------------------- */
+#clock {
+  font-size: 92px;
+  line-height: 1;
+  color: var(--green);
+  text-shadow: 0 0 12px #00ff88a0;
+}
+#date {
+  margin-top: 4px;
+  font-size: 60px;
+  text-shadow: 0 0 6px #00ff88a0;
+  opacity: .9;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+#sun-times {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 40px;
+}
+
+/* Flip clock */
+.flipclock {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: .5px;
+}
+.flipclock .sep {
+  font-size: clamp(48px, 10vh, 100px);
+  line-height: 1;
+  text-shadow: 0 0 10px #00ff88a0;
+  transform: none;
+}
+.digit {
+  --digit-size: clamp(60px, 12vh, 120px);
+  position: relative;
+  width: calc(var(--digit-size) * 0.62);
+  height: calc(var(--digit-size) + 2px);
+  overflow: hidden;
+  border-radius: 10px;
+  background: rgba(0,0,0,.35);
+  border: 1px solid rgba(255,255,255,.06);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.03), 0 6px 18px rgba(0,0,0,.4);
+  backdrop-filter: blur(3px) saturate(120%);
+}
+.digit .reel {
+  position: absolute; left: 0; top: 0;
+  display: flex; flex-direction: column;
+  will-change: transform;
+}
+.digit .reel span {
+  height: var(--digit-size);
+  display: flex; align-items: center; justify-content: center;
+  font-size: var(--digit-size);
+  font-weight: 800; color: var(--green);
+  text-shadow: 0 0 12px #00ff8870;
+}
+.digit.changing {
+  box-shadow:
+    inset 0 0 0 1px rgba(255,255,255,.04),
+    0 0 20px rgba(0,255,136,.25),
+    0 6px 18px rgba(0,0,0,.4);
+  transition: box-shadow .24s ease;
+}
+
+/* Wave line (System) */
+.waveWrap {
+  margin-top: 8px;
+  height: 64px;
+  border-top: 1px solid var(--grid);
+  position: relative;
+}
+#waveCanvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+  will-change: transform, opacity;
+  transform: translateZ(0);
+}
+
+/* Extra/system info */
+#extra {
+  white-space: pre-line;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.28;
+  font-size: clamp(20px, 5vh, 28px);
+}
+
+/* --------------------
+   Legends & swatches
+-------------------- */
+.legend { display: inline-flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.legend-item { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; opacity: .95; }
+.swatch { width: 12px; height: 12px; border-radius: 2px; box-shadow: 0 0 6px currentColor; }
+.swatch.gpu     { color: #66ccff; background: #66ccff; }
+.swatch.gputemp { color: #ff4444; background: #ff4444; }
+.swatch.cputemp { color: #ffaa00; background: #ffaa00; }
+
+/* --------------------
+   NOW PLAYING
+-------------------- */
+.np-title {
+  font-size: clamp(28px, 5.4vh, 60px);
+  font-weight: 800;
+  letter-spacing: .3px;
+  line-height: 1.08;
+  text-shadow: 0 0 14px rgba(0,255,136,.35);
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  margin-bottom: 6px;
+}
+#np-artist {
+  font-size: clamp(24px, 4.4vh, 48px);
+  font-weight: 600;
+  line-height: 1.1;
+  opacity: .95;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+#np-album {
+  font-size: clamp(16px, 2.2vh, 22px);
+  opacity: .78;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 8px;
+}
+.np-divider {
+  height: 2px;
+  margin: 6px 0 8px;
+  background: linear-gradient(90deg, rgba(0,255,136,.35), rgba(255,170,0,.35));
+  box-shadow: 0 0 8px rgba(0,255,136,.35);
+  opacity: .7;
+}
+
+/* Glass container */
+.glass {
+  position: relative;
+  z-index: 5;
+  isolation: isolate;
+  border-radius: 18px;
+  background: rgba(10,10,10,0.55);
+  border: 1px solid rgba(255,255,255,0.08);
+  box-shadow:
+    0 10px 30px rgba(0,0,0,0.45),
+    inset 0 0 0 1px rgba(255,255,255,0.03);
+  backdrop-filter: blur(8px) saturate(120%);
+  -webkit-backdrop-filter: blur(8px) saturate(120%);
+}
+.glass::before {
+  content: "";
+  position: absolute; inset: 0;
+  border-radius: 18px;
+  background:
+    radial-gradient(120% 140% at 50% 50%, rgba(0,0,0,0) 60%, rgba(0,0,0,.35) 100%),
+    linear-gradient(to top, rgba(0,0,0,.18), transparent 22%),
+    linear-gradient(to bottom, rgba(0,0,0,.18), transparent 22%);
+  pointer-events: none;
+  z-index: -1;
+}
+
+.now-wrap {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  position: relative;
+}
+.now-wrap::before {
+  content: "";
+  position: absolute;
+  inset: -40px;
+  z-index: 0;
+  border-radius: 32px;
+  pointer-events: none;
+  --amb1: rgba(0,0,0,0.0);
+  --amb2: rgba(0,0,0,0.0);
+  --amb3: rgba(0,0,0,0.20);
+  --amb-alpha: 0;
+  background:
+    radial-gradient(140% 120% at 20% 30%, var(--amb1), transparent 72%),
+    radial-gradient(130% 110% at 80% 70%, var(--amb2), transparent 62%),
+    radial-gradient(100% 100% at 50% 50%, var(--amb3), transparent 74%);
+  filter: blur(44px) saturate(180%);
+  opacity: var(--amb-alpha);
+  transition: background .25s ease, opacity .25s ease, filter .25s ease;
+}
+.now-wrap::after {
+  content: "";
+  position: absolute; inset: -80px; z-index: 0; border-radius: 48px; pointer-events: none;
+  background:
+    radial-gradient(120% 90% at 25% 35%, var(--amb1), transparent 60%),
+    radial-gradient(110% 85% at 75% 65%, var(--amb2), transparent 60%);
+  filter: blur(70px) saturate(180%);
+  opacity: calc(var(--amb-alpha) * 0.9);
+  transition: inherit;
+}
+
+.now-col { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
+.now-col .progress,
+.now-col .time-row { width: 100%; margin: 0; padding: 0; }
+
+.time-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-top: 6px;
+  gap: 0;
+}
+.time-row span {
+  font-size: clamp(22px, 4.2vh, 42px);
+  font-weight: 800;
+  letter-spacing: .5px;
+  text-shadow: 0 0 10px rgba(0,255,136,.35);
+}
+.time-row #t-cur { text-align: left; }
+.time-row #t-end { text-align: right; }
+
+/* Vinyl cover */
+.art-wrap {
+  position: relative;
+  width: 260px; height: 260px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  overflow: hidden;
+  box-shadow:
+    0 0 16px var(--amb1, rgba(0,0,0,0.0)),
+    inset 0 0 20px rgba(0,0,0,.8);
+  background: #111;
+}
+.art {
+  width: 100%; height: 100%;
+  object-fit: cover; border-radius: 50%;
+  animation: spin 22s linear infinite;
+  animation-play-state: paused; /* paused by default */
+  filter: saturate(1.1) contrast(1.05);
+}
+.art.playing { animation-play-state: running; }
+.art-hole {
+  position: absolute; top: 50%; left: 50%;
+  transform: translate(-50%,-50%);
+  width: 26px; height: 26px; border-radius: 50%;
+  background: #000; box-shadow: 0 0 6px rgba(0,0,0,.35);
+  border: 2px solid rgba(255,255,255,.08);
+}
+@keyframes spin { from { transform: rotate(0deg);} to { transform: rotate(360deg);} }
+
+/* Progress bar */
+.progress {
+  --pct: 0%;
+  --prog-glow: .35;
+  --stripes-alpha: .22;
+  --stripes-speed: 6s;
+  --shimmer-speed: 2.8s;
+  position: relative;
+  height: 10px;
+  width: 100%;
+  margin-top: 12px;
+  margin-bottom: 12px;
+  border-radius: 9999px;
+  background: #0a0a0a;
+  overflow: hidden;
+  box-shadow:
+    inset 0 0 0 1px #222,
+    0 0 8px rgba(0,255,136,0.25),
+    0 0 16px rgba(255,170,0, var(--prog-glow));
+}
+.progress-bar {
+  position: absolute; left: 0; top: 0; bottom: 0;
+  width: 0%;
+  --prog1: var(--amb1, rgba(0,255,136,0.9));
+  --prog2: var(--amb2, rgba(255,170,0,0.9));
+  background: linear-gradient(90deg, var(--prog1), var(--prog2));
+  transition: width .25s cubic-bezier(.22,.61,.36,1);
+}
+.progress::after {
+  content: "";
+  position: absolute; top: -6px; bottom: -6px;
+  left: calc(var(--pct) - 8px);
+  width: 16px; border-radius: 50%; pointer-events: none;
+  background: radial-gradient(circle,
+    rgba(255,255,255,.96) 0%,
+    color-mix(in oklab, var(--prog2) 80%, white 20%) 40%,
+    transparent 72%);
+  filter: blur(.5px);
+  opacity: 0;
+  transition: opacity .18s linear;
+}
+.progress.playing::after { opacity: .9; }
+@keyframes shimmer { 0% { transform: translateX(-120%);} 100% { transform: translateX(520%);} }
+.progress-bar::before {
+  content: "";
+  position: absolute; inset: 0; pointer-events: none;
+  background:
+    repeating-linear-gradient(-45deg,
+      rgba(255,255,255,.10) 0 8px,
+      rgba(255,255,255,0)   8px 16px);
+  mix-blend-mode: screen;
+  opacity: var(--stripes-alpha);
+  animation: prog-stripes var(--stripes-speed) linear infinite;
+}
+@keyframes prog-stripes { from { background-position: 0 0;} to { background-position: 600px 0;} }
+.progress-bar::after { animation: shimmer var(--shimmer-speed, 2.8s) linear infinite; }
+
+/* Now Playing: visualizer area pinned to bottom */
+#view-now .panel { position: relative; }
+#vizWrap {
+  position: absolute;
+  left: 14px; right: 14px; bottom: 12px;
+  height: 16vh;
+  border: 1px solid #222;
+  border-radius: 10px;
+  overflow: hidden;
+  backdrop-filter: blur(2px);
+  background: rgba(0,0,0,0.35);
+  box-shadow: 0 0 16px rgba(0,0,0,0.4) inset, 0 0 10px #00ff8890;
+}
+#visualizer {
+  width: 100%;
+  height: 100px;
+  display: block;
+  background: transparent;
+}
+
+/* --------------------
+   Sun — Infinity
+-------------------- */
+.sun-infty-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 8px;
+}
+.sun-block {
+  display: flex; flex-direction: column; align-items: center;
+  font-size: clamp(24px, 4.8vh, 42px);
+  color: var(--green);
+  text-shadow: 0 0 8px #00ff88a0;
+}
+.sun-icon { font-size: 1.4em; }
+.infty-center { display: flex; justify-content: center; align-items: center; }
+.infty { width: 190px; height: 100px; }
+.infty-base {
+  fill: none;
+  stroke: rgba(255,170,0,0.9);
+  stroke-width: 8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  filter: drop-shadow(0 0 6px rgba(255,170,0,0.8));
+}
+.infty-run {
+  fill: none;
+  stroke: url(#inftyRunGrad);
+  stroke-width: 8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 36 260;
+  animation: infty-dash 2.6s linear infinite;
+}
+@keyframes infty-dash { from { stroke-dashoffset: 0;} to { stroke-dashoffset: -296;} }
+
+/* --------------------
+   CRT Scanlines
+-------------------- */
+.scanlines {
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(255,255,255,0.05) 0px,
+    rgba(255,255,255,0.05) 2px,
+    rgba(0,0,0,0)          4px
+  );
+  mix-blend-mode: overlay;
+}
+.scanline {
+  position: fixed; left: 0; right: 0;
+  top: calc(-1 * var(--beam-height));
+  height: var(--beam-height);
+  z-index: 0; pointer-events: none;
+  opacity: .8; will-change: transform, opacity;
+  background:
+    radial-gradient(100% 70% at 50% -35%,
+      var(--beam-glow) 0%,
+      var(--beam-color) 45%,
+      rgba(0,0,0,0) 80%),
+    linear-gradient(to bottom,
+      var(--beam-color) 0%,
+      rgba(0,0,0,0) 85%);
+  background-repeat: no-repeat, no-repeat;
+  background-position: center top, center top;
+  background-size: 100% 100%, 100% 100%;
+  box-shadow:
+    0 -6px 16px 2px var(--beam-glow),
+    0 10px 24px -6px var(--beam-color);
+  animation: crt-scan var(--beam-speed) linear infinite;
+}
+@keyframes crt-scan {
+  0%   { transform: translateY(calc(-1 * var(--beam-height))); }
+  100% { transform: translateY(120vh); }
+}
+
+/* --------------------
+   MARKETS — Clean
+-------------------- */
+
+/* Rates: left = name, right = value */
+.rates-grid {
+  position: relative; z-index: 3;
+  display: flex; flex-direction: column; gap: var(--rate-gap);
+}
+.rate {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  font-size: var(--rate-fs);
+  padding: var(--rate-row-pad-y) 0;
+}
+.rate-name { opacity: .95; }
+.rate-val  {
+  font-weight: 800; text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Panel markets */
+
+/* Panel container */
+.markets { display: flex; flex-direction: column; gap: 10px; min-height: 0; }
+
+/* Ticker on top */
+.ticker {
+  width: 100%;
+  height: var(--ticker-h);
+  font-size: var(--ticker-fs);
+  overflow: hidden; position: relative;
+  mask-image: linear-gradient(90deg, transparent 0, #000 8%, #000 92%, transparent 100%);
+  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 8%, #000 92%, transparent 100%);
+}
+.ticker-track {
+  position: absolute; white-space: nowrap; display: inline-flex;
+  gap: var(--ticker-gap);
+  left: 0; top: 50%; transform: translateY(-50%);
+  animation: fx-scroll 24s linear infinite;
+}
+@keyframes fx-scroll { from { transform: translateX(0);} to { transform: translateX(-50%);} }
+
+.fx-item { display: inline-flex; gap: 14px; align-items: baseline; }
+.fx-pair  { opacity: .95; }
+.fx-price { font-weight: 800; font-variant-numeric: tabular-nums; }
+.fx-delta {
+  font-weight: 800; min-width: 96px; text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.fx-delta.fx-up   { color: #00ff88; text-shadow: 0 0 8px #00ff8866; }
+.fx-delta.fx-down { color: #ff5555; text-shadow: 0 0 8px #ff555566; }
+/* Subgrid (clean) */
+.mk-subgrid.mk-clean {
+  display: grid;
+  grid-template-columns: 1.6fr 1fr;
+  gap: 20px;
+  position: relative; z-index: 3; /* above watermark */
+}
+
+/* Cards & micro charts */
+.mk-card {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.14);
+  border-radius: 12px;
+  padding: 12px 14px;
+  backdrop-filter: blur(2px);
+}
+.mk-card-title {
+  font-size: 14px;
+  opacity: .95;
+  margin-bottom: 8px;
+  letter-spacing: .5px;
+}
+.mk-sparks canvas {
+  width: 100%;
+  height: 54px;
+  background: rgba(255,255,255,0.02);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 10px;
+}
+
+/* Sessions — vertical status bar, 2-line layout */
+.sessions { position: relative; display: flex; flex-direction: column; gap: 12px; }
+.session-row {
+  position: relative;
+  display: grid;
+  grid-template-columns: 20px 1fr;
+  grid-template-rows: auto auto;
+  grid-column-gap: 12px;
+  align-items: center;
+  padding-left: 14px; /* room for vertical bar */
+}
+.session-row::before {
+  content: "";
+  position: absolute; left: 0; top: 2px; bottom: 2px;
+  width: 6px; border-radius: 3px;
+  background: var(--sess, #666);
+  box-shadow: 0 0 10px var(--sess, #666);
+}
+.session-row .name {
+  font-size: 30px;
+  font-weight: 900;
+  letter-spacing: .2px;
+  line-height: 1.1;
+}
+.session-row .time {
+  font-size: 26px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  opacity: .98;
+}
+/* status colors (JS applies classes) */
+.session-row.open  { --sess: #00e08a; }
+.session-row.amber { --sess: #ffb000; }
+.session-row.closed{ --sess: #ff4d4d; }
+
+/* Strength bars */
+.strength { display: flex; flex-direction: column; gap: 14px; }
+.str-row {
+  display: grid;
+  grid-template-columns: 64px 1fr 70px;
+  gap: 12px; align-items: center;
+}
+.str-row .lbl {
+  font-size: 22px;
+  font-weight: 900;
+  opacity: .95;
+}
+.str-row .bar {
+  height: 16px;
+  background: rgba(255,255,255,0.1);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.str-row .bar i {
+  display: block; height: 100%; width: 0%;
+  background: linear-gradient(90deg, rgba(80,160,255,.65), rgba(0,224,138,.95));
+  box-shadow: 0 0 16px rgba(0,224,138,.45) inset;
+  transition: width .6s ease;
+}
+.str-row .val {
+  font-size: 22px;
+  text-align: right;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- Sesje w jednej linii --- */
+.sessions-inline{
+  display:grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  align-items:center;
+  position:relative; z-index:3; /* nad tłem */
+}
+.sessions-inline .session-row{
+  position:relative;
+  display:grid;
+  grid-template-columns: 1fr auto;
+  align-items:baseline;
+  padding: 6px 10px 10px 12px;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.08);
+}
+.sessions-inline .session-row::before{
+  content:""; position:absolute; left:6px; top:6px; bottom:6px; width:6px; border-radius:3px;
+  background: var(--sess, #666); box-shadow:0 0 10px var(--sess, #666);
+}
+.sessions-inline .name{ font-size:24px; font-weight:900; margin-left:10px; }
+.sessions-inline .time{ font-size:22px; font-weight:800; font-variant-numeric:tabular-nums; }
+
+/* statusy z Twojej logiki (open/amber/closed) */
+.session-row.open  { --sess:#00e08a; }
+.session-row.amber { --sess:#ffb000; }
+.session-row.closed{ --sess:#ff4d4d; }
+/* Ticker nad wszystkim */
+#panel-markets .ticker{ position:relative; z-index:10; margin-bottom:12px; }
+
+/* 3 kolumny: lewo | środek | prawo */
+.mk-split{
+  display:grid;
+  grid-template-columns:1fr 1fr 1fr;
+  gap:12px;
+  align-items:stretch;
+}
+
+/* Karty sesji (pełna wysokość kolumny) */
+.sess{
+  position:relative;
+  border-radius:12px;
+  background:rgba(255,255,255,.03);
+  border:1px solid rgba(255,255,255,.08);
+  padding:10px 12px 12px 16px;
+}
+.sess .city{ font-weight:900; font-size:22px; }
+.sess .status{ font-weight:800; margin-top:6px; font-variant-numeric:tabular-nums; }
+.sess .bar{
+  position:absolute; left:6px; top:8px; bottom:8px; width:6px; border-radius:3px;
+  background:var(--sess,#666); box-shadow:0 0 10px var(--sess,#666);
+}
+.sess.open{ --sess:#00e08a; }
+.sess.amber{ --sess:#ffb000; }
+.sess.closed{ --sess:#ff4d4d; }
+/* ============ Currency Morph (illusion) ============ */
+.symbol-center { position: relative; overflow: hidden; } /* masz już, zostawiamy */ /* :contentReference[oaicite:3]{index=3} */
+
+/* w trakcie morfingu włączamy delikatną koagulację (goo) */
+.symbol-center.goo { filter: url(#goo); } /* definicja #goo jest już w index.html */ /* :contentReference[oaicite:4]{index=4} */
+
+/* bazowo: bez opacity-crossfade; sterujemy animacją klasami */
+.symbol { opacity: 0; }
+.symbol.active { opacity: 1; }
+
+/* === FIX: przywróć wielkość glifu i sterowanie widocznością === */
+
+/* .symbol ma zajmować cały środek i startować jako niewidoczny */
+.symbol {
+  position: absolute;
+  inset: 0;
+  opacity: 0;                       /* wraca kontrola widoczności */
+}
+.symbol.active { opacity: 1; }       /* działa z Twoim JS-em */
+
+/* glif ma prawdziwy środek i konkretny rozmiar */
+.symbol .glyph,
+.symbol .glyph-shine{
+  position: absolute;
+  left: 50%; top: 50%;
+  transform: translate(-50%, -50%);
+  transform-origin: center center;
+  will-change: transform, filter, letter-spacing, opacity;
+  font-size: var(--sym-size, 120px); /* KLUCZ: rozmiar wraca */
+  line-height: 1;
+  white-space: nowrap;
+}
+
+/* kosmetyka: kolory/połysk jak wcześniej */
+.symbol .glyph{ color: currentColor; text-shadow: 0 0 14px rgba(120,200,255,.18); }
+.symbol .glyph-shine{
+  color: transparent;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.85), transparent);
+  background-size: 250% 100%;
+  -webkit-background-clip: text; background-clip: text;
+  animation: shine-sweep 5.6s ease-in-out infinite;
+}
+@keyframes shine-sweep{ 0%{background-position:-140% 0;} 50%{background-position:140% 0;} 100%{background-position:140% 0;} }
+@keyframes mk-morph-out {
+  0%   { opacity: 1;  filter: blur(0)  saturate(115%);
+         transform: translate(-50%,-50%) scale(1)    skewX(0deg)  skewY(0deg);
+         letter-spacing: 0; }
+  35%  { opacity: .98; filter: blur(1.2px) saturate(128%);
+         transform: translate(-50%,-50%) scale(1.04) skewX(2deg)  skewY(-1deg);
+         letter-spacing: .01em; }
+  70%  { opacity: .92; filter: blur(3px) saturate(135%);
+         transform: translate(-50%,-50%) scale(1.08) skewX(3deg)  skewY(-2deg);
+         letter-spacing: .035em; }
+  100% { opacity: 0;  filter: blur(5px) saturate(140%);
+         transform: translate(-50%,-50%) scale(1.12) skewX(4deg)  skewY(-2deg);
+         letter-spacing: .05em; }
+}
+
+@keyframes mk-morph-in {
+  0%   { opacity: 0;  filter: blur(5px) saturate(140%);
+         transform: translate(-50%,-50%) scale(.88)  skewX(-4deg) skewY(2deg);
+         letter-spacing: -.05em; }
+  40%  { opacity: .84; filter: blur(2.2px) saturate(130%);
+         transform: translate(-50%,-50%) scale(.94)  skewX(-2deg) skewY(1deg);
+         letter-spacing: -.02em; }
+  75%  { opacity: .97; filter: blur(1px)  saturate(122%);
+         transform: translate(-50%,-50%) scale(.99)  skewX(-1deg) skewY(0deg);
+         letter-spacing: -.005em; }
+  100% { opacity: 1;  filter: blur(0)    saturate(115%);
+         transform: translate(-50%,-50%) scale(1)    skewX(0deg)  skewY(0deg);
+         letter-spacing: 0; }
+}
+
+/* animuj warstwy glifu, nie kontener */
+.symbol.morph-out .glyph,
+.symbol.morph-out .glyph-shine {
+  animation: mk-morph-out 1.1s cubic-bezier(.2,.65,.2,1) forwards;
+}
+.symbol.morph-in .glyph,
+.symbol.morph-in .glyph-shine {
+  animation: mk-morph-in 1.1s cubic-bezier(.2,.65,.2,1) forwards;
+}
+
+/* shine tylko podczas morfingu – w stanie spoczynku nie świeci */
+.symbol .glyph-shine { opacity: 0; }
+.symbol.morph-in .glyph-shine,
+.symbol.morph-out .glyph-shine { opacity: .9; }
+
+/* drobna stabilizacja renderingu */
+.symbol .glyph,
+.symbol .glyph-shine{
+  backface-visibility: hidden;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: geometricPrecision;
+}
+
+/* ===== Morphing waluty w środku ===== */
+#symWrap { --sym-size: 120px; } /* możesz podbić np. do 140px */
+
+#mkMorph{
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  filter: url(#mkThreshold) blur(0.35px); /* klucz do efektu */
+  pointer-events: none;
+  z-index: 2; /* nad tłem, pod ewentualnymi overlayami */
+}
+
+/* Dwie warstwy tekstu nakładają się idealnie w centrum */
+#mkMorph .mkText{
+  position: absolute;
+  left: 50%; top: 50%;
+  transform: translate(-50%, -50%);
+  font-size: var(--sym-size);
+  line-height: 1;
+  white-space: nowrap;
+  font-weight: 900;
+  letter-spacing: 0.02em;
+  font-family: Inter, "Segoe UI", "Noto Sans", "DejaVu Sans", system-ui, sans-serif;
+  color: #ffaa00;                 /* bazowy kolor przed thresholdem */
+  text-shadow:
+    0 0 8px rgba(255, 196, 107, .35),
+    0 0 20px rgba(255, 160,   0, .20);
+  will-change: filter, opacity, transform;
+    --mk-dy: 0em;
+  transform: translate(-50%, -50%) translateY(var(--mk-dy));
+}
+
+/* (ważne) schowaj stare warstwy symboli, żeby nie dublować środka */
+#symWrap .symbol { display: none; }
+/* ====== Markets: vert tweak dla tickera ====== */
+
+/* 1) Spłaszcz odrobinę sam pasek (opcjonalnie) */
+#panel-markets{
+  --ticker-h: 72px;      /* było 92px – daj 64–76px wedle gustu */
+  --ticker-fs: 30px;     /* dopasuj font w tickerze (było 36px) */
+}
+
+/* 2) Podnieś ścieżkę przewijania do góry zamiast idealnego środka */
+#panel-markets .ticker-track{
+  top: 8px;              /* było 50% */
+  transform: none;       /* bez -50%, żeby nie wracało na środek */
+}
+
+/* 3) (fine-tune) jeżeli chcesz minimalny luz od góry, zmień 8px wyżej/niżej */
+/* ==== MARKETS: 4 kolumny z walutą po prawej ==== */
+#panel-markets .mk-grid-4{
+  display: grid;
+  grid-template-columns: 1.15fr 1.15fr 1.15fr 0.85fr; /* sesje większe, waluta węższa */
+  gap: 10px;
+  align-items: stretch;
+}
+
+/* karty sesji — lekko większe */
+#panel-markets .mk-grid-4 .sess{
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(255,255,255,.04);
+  border: 1px solid rgba(255,255,255,.10);
+  display: grid;
+  grid-template-rows: auto auto auto;
+  gap: 2px;
+}
+#panel-markets .mk-grid-4 .sess .city{
+  font-weight: 800;
+  font-size: 14px;
+  letter-spacing: .02em;
+}
+#panel-markets .mk-grid-4 .sess .time{ font-size: 22px; line-height: 1.1; }
+#panel-markets .mk-grid-4 .sess .note,
+#panel-markets .mk-grid-4 .sess .status{ font-size: 12px; opacity: .78; }
+
+/* prawa kolumna: waluta mniejsza + bezpieczny margines wewnątrz */
+#panel-markets #symWrap{
+  --sym-size: 92px;   /* było większe; zmniejszamy, by wszystko się zmieściło */
+  min-height: 120px;
+}
+#panel-markets #mkMorph{ inset: 8px; } /* wcześniej 12px — ciaśniej przy krawędzi */
+
+/* Responsywka: na wąskich szerokościach rozbij na 2 kolumny */
+@media (max-width: 720px){
+  #panel-markets .mk-grid-4{ grid-template-columns: 1fr 1fr; }
+  #panel-markets #symWrap{ --sym-size: 84px; }
+}
+
+/* ===== Sessions: bigger & clear states ===== */
+#panel-markets .mk-grid-4 .sess{
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(255,255,255,.05);
+  border: 1px solid rgba(255,255,255,.12);
+}
+
+#panel-markets .mk-grid-4 .sess .city{
+  font-weight: 900;
+  font-size: 26px;
+  letter-spacing: .02em;
+}
+
+#panel-markets .mk-grid-4 .sess .clock{
+  margin-top: 4px;
+  font-size: 30px;          /* powiększ, jeśli chcesz: 32–34px */
+  line-height: 1.1;
+  letter-spacing: .02em;
+  opacity: .95;
+}
+
+/* Pasek stanu po lewej w kaflu */
+#panel-markets .mk-grid-4 .sess .bar{
+  width: 4px;
+  border-radius: 3px;
+  background: rgba(255,255,255,.15);
+  box-shadow: inset 0 0 8px rgba(255,255,255,.15);
+}
+
+/* Kolory stanów */
+#panel-markets .mk-grid-4 .sess.open  .bar{
+  background: #24ff8a;
+  box-shadow: 0 0 10px rgba(36,255,138,.7), inset 0 0 6px rgba(255,255,255,.25);
+}
+#panel-markets .mk-grid-4 .sess.closed .bar{
+  background: #ff3a3a;
+  box-shadow: 0 0 10px rgba(255,58,58,.6), inset 0 0 6px rgba(255,255,255,.2);
+}
+#panel-markets .mk-grid-4 .sess.soon .bar{
+  background: #FFB84D;
+  box-shadow: 0 0 10px rgba(255,184,77,.55), inset 0 0 6px rgba(255,255,255,.2);
+}
+
+/* Waluta – nieco ciaśniej, żeby zmieścić większe kafle */
+#panel-markets #symWrap{ --sym-size: 88px; min-height: 120px; }
+#panel-markets #mkMorph{ inset: 8px; }
+
+/* ===== Tickers ===== */
+
+/* Tickery zawsze widoczne i na wierzchu */
+#panel-markets,
+#panel-markets .markets,
+#panel-markets .ticker{
+  overflow: visible !important;
+  position: relative;
+}
+#panel-markets .ticker{
+  z-index: 12 !important;
+  --ticker-h: 76px;   /* górny ticker */
+  --ticker-fs: 28px;
+}
+
+/* Dolny ticker – wolniejszy i nieco niższy */
+#stk-ticker{
+  --ticker-h: 68px;
+  --ticker-fs: 24px;
+  margin-top: 8px;
+}
+
+/* Tor centrowany pionowo, ruch w poziomie robi animacja */
+#panel-markets .ticker .ticker-track{
+  top: 50%;
+  transform: translateY(-50%);
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  white-space: nowrap;
+}
+
+/* Keyframes z wbudowanym centrowaniem w pionie */
+@keyframes fx-scroll {
+  from { transform: translateY(-50%) translateX(0); }
+  to   { transform: translateY(-50%) translateX(-50%); }
+}
+
+/* Prędkości: szybciej FX, wolniej Stocks */
+#fx-ticker  .ticker-track{ animation: fx-scroll 24s linear infinite; }
+#stk-ticker .ticker-track{ animation: fx-scroll 90s linear infinite; }
+
+/* Wygląd itemów dolnego tickera */
+#stk-ticker .stk-item{
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 0 18px;
+  font-weight: 700;
+  letter-spacing: .02em;
+  opacity: .95;
+  white-space: nowrap;
+}
+#stk-ticker .stk-sym  { opacity: .9; }
+#stk-ticker .stk-price{ opacity: .9; }
+#stk-ticker .stk-chg  { font-variant-numeric: tabular-nums; }
+
+#stk-ticker .up   .stk-chg{ color:#24ff8a; }
+#stk-ticker .down .stk-chg{ color:#ff5858; }
+#stk-ticker .flat .stk-chg{ color:#FFB84D; }
+
+/* === NOW PLAYING — stabilna prawa kolumna + minimum dla progressu === */
+
+/* Załóżmy strukturę:
+   .now-wrap  (cały box)
+     ├─ .now-art   (okładka)
+     └─ .now-info  (prawy blok: tytuł/album/progress/czas)
+*/
+
+/* 1) dwukolumnowy grid z MIN dla prawej strony */
+.now-wrap{
+  --info-min: 260px;                 /* ↓ nie pozwól zejść poniżej tej szerokości */
+  display: grid;
+  grid-template-columns: auto minmax(var(--info-min), 1fr);
+  gap: 16px;                          /* oddech między okładką a tekstem */
+  align-items: center;
+}
+
+/* 2) prawa kolumna niech sama też pilnuje minimum */
+.now-info{ min-inline-size: var(--info-min); }
+
+/* 3) tytuł/album – niech się nie łamią dziwnie i nie wpychają progressu */
+.now-info .title{
+  font-weight: 900;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 2px;                 /* mały oddech nad albumem */
+}
+.now-info .album{
+  opacity: .85;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 10px;                /* od tytułu do paska */
+}
+
+/* 4) PROGRESS: minimum szerokości + elastyczny max */
+.now-info .progress{
+  /* nigdy mniej niż 200px, zwykle ~50% prawej kolumny, ale max 420px */
+  inline-size: clamp(200px, 50%, 420px);
+  block-size: 6px;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-block: 4px 10px;             /* oddech nad i pod paskiem */
+}
+
+/* jeśli masz wewnętrzny fill paska */
+.now-info .progress .bar{
+  block-size: 100%;
+  /* kolory już masz z --prog1/--prog2; tu tylko upewniamy się, że nie rozciąga wysokości */
+}
+
+/* 5) czas/pozostałe linie – maintain rhythm */
+.now-info .time{
+  font-variant-numeric: tabular-nums;
+  margin-top: 4px;
+}
+
+/* 6) małe ekrany – odrobinę ciaśniej, ale nadal z minimum */
+@media (max-width: 520px){
+  .now-wrap{
+    --info-min: 220px;
+    gap: 12px;
+  }
+  .now-info .progress{ inline-size: clamp(180px, 56%, 360px); }
+}
+/* === SESSIONS: bez boxów, tylko pasek + tekst === */
+#panel-markets .sessions-inline .session-row,
+#panel-markets .sess{
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+}
+
+/* pasek statusu zostaje */
+#panel-markets .sessions-inline .session-row::before,
+#panel-markets .sess .bar{
+  z-index: 0;
+}
+
+/* teksty w sesjach ponad paskiem, ale nisko w hierarchii */
+#panel-markets .sessions-inline .session-row,
+#panel-markets .sess{
+  position: relative;
+  z-index: 1 !important;
+}
+
+/* === CURRENCY: zawsze nad sesjami === */
+#panel-markets { position: relative; isolation: isolate; }
+#panel-markets .mk-grid-4{ position: relative; z-index: 2; overflow: visible; }
+
+#panel-markets #symWrap{
+  position: relative;         /* tworzy stacking-context */
+  z-index: 1000 !important;   /* wyżej niż cokolwiek w panelu */
+  pointer-events: none;       /* nie łapie klików */
+}
+
+/* na wszelki wypadek – subgrids też niżej */
+#panel-markets .sessions,
+#panel-markets .sessions-inline,
+#panel-markets .mk-subgrid{
+  position: relative;
+  z-index: 1 !important;
+  overflow: visible;
+}
+
+/* tickery najwyżej, jak wcześniej */
+#panel-markets .ticker{ position: relative; z-index: 2000 !important; }
+
+/* === Subtelny glow dla waluty === */
+#mkMorph .mkText {
+  color: #ffaa00;
+  text-shadow:
+    0 0 4px rgba(255,170,0,0.55),
+    0 0 8px rgba(255,170,0,0.35),
+    0 0 14px rgba(255,170,0,0.25);
+  filter: drop-shadow(0 0 3px rgba(255,170,0,0.4));
+  transition: text-shadow .3s ease;
+}
+
+/* Podczas morfingu trochę mocniej */
+#mkMorph .mkText.morphing {
+  text-shadow:
+    0 0 6px rgba(255,170,0,0.7),
+    0 0 12px rgba(255,170,0,0.45),
+    0 0 20px rgba(255,170,0,0.35);
+}
+/* === Currency center: fix positioning & stacking === */
+
+/* kontener komórki z walutą */
+#panel-markets #symWrap{
+  position: relative;          /* baza dla absolute child */
+  z-index: 1000;               /* nad kartami */
+  overflow: visible;           /* nic nie przycina */
+  pointer-events: none;        /* waluta nie łapie klików */
+}
+
+/* WARSTWA MORPHU – ma wypełniać komórkę i centrować zawartość */
+#panel-markets #mkMorph{
+  position: absolute !important;
+  inset: 0 !important;         /* wraca pełne pokrycie komórki */
+  display: grid;
+  place-items: center;
+  z-index: 1001;
+}
+
+/* sam tekst waluty – prawdziwy środek */
+#panel-markets #mkMorph .mkText{
+  position: absolute;
+  left: 50%; top: 50%;
+  transform: translate(-50%, -50%);
+}
+
+/* sesje niżej i bez przycinania */
+#panel-markets .sessions-inline,
+#panel-markets .mk-grid-4 .sess{
+  position: relative;
+  z-index: 10;
+  overflow: visible !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+}
+#panel-markets .mk-grid-4{ position: relative; z-index: 5; overflow: visible; }
+
+/* tickery najwyżej */
+#panel-markets .ticker{ position: relative; z-index: 2000; }

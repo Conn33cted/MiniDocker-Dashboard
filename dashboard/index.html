@@ -1,0 +1,1703 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8" />
+  <title>Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="markets.css">
+</head>
+<body>
+  <!-- CRT overlay -->
+  <div class="scanlines"></div>
+  <div class="scanline"></div>
+
+  <!-- TABS -->
+<div id="tabs">
+  <div id="tab-row" style="display:flex; gap:10px; align-items:center; position:relative;">
+    <span class="badge" data-tab="clock">Home</span>
+    <span class="badge" data-tab="perf">Performance</span>
+    <span class="badge" data-tab="now">Now Playing</span>
+    <span class="badge" data-tab="extra">Extra</span>
+
+    <!-- wskaźnik/bąbelek muszą być WEWNĄTRZ tego kontenera -->
+    <div id="tab-indicator"></div>
+    <div id="tab-bubble"></div>
+  </div>
+
+  <div class="brand">xBLOOMBERG</div>
+</div>
+
+<!-- NEW: filtr „gooey” -->
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+    <filter id="goo">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="6" result="blur"/>
+      <feColorMatrix in="blur" mode="matrix"
+        values="1 0 0 0 0
+                0 1 0 0 0
+                0 0 1 0 0
+                0 0 0 20 -10" result="goo"/>
+      <feBlend in="SourceGraphic" in2="goo"/>
+    </filter>
+  </defs>
+</svg>
+
+
+  <!-- CLOCK (układ 2×2) -->
+  <div class="grid" id="view-clock" data-tab="clock">
+    <!-- LT -->
+    <div class="panel">
+      <h2>Clock</h2>
+<div id="clock" class="flipclock" aria-label="czas">
+  <div class="digit" data-unit="h1"><div class="reel"></div></div>
+  <div class="digit" data-unit="h2"><div class="reel"></div></div>
+  <span class="sep">:</span>
+  <div class="digit" data-unit="m1"><div class="reel"></div></div>
+  <div class="digit" data-unit="m2"><div class="reel"></div></div>
+  <span class="sep">:</span>
+  <div class="digit" data-unit="s1"><div class="reel"></div></div>
+  <div class="digit" data-unit="s2"><div class="reel"></div></div>
+</div>
+<div id="date">—</div>
+<div id="sun-times" class="stat">
+      <div class="sun-infty-row">
+  <div class="sun-block">
+    <span class="sun-icon">☀︎</span>
+    <span id="sunrise-t">--:--</span>
+  </div>
+
+  <div class="infty-center">
+    <svg class="infty" viewBox="0 0 120 60" aria-hidden="true">
+      <defs>
+        <linearGradient id="inftyRunGrad" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0"   stop-color="rgba(0,0,0,0)" />
+          <stop offset="0.5" stop-color="rgba(0,0,0,0.7)" />
+          <stop offset="1"   stop-color="rgba(0,0,0,0)" />
+        </linearGradient>
+      </defs>
+
+      <!-- baza ∞ -->
+      <path class="infty-base"
+        d="M20,30
+           C20,14 44,14 60,30
+           S100,46 100,30
+           S76,14 60,30
+           S20,46 20,30" />
+
+      <!-- animowana kreska -->
+      <path class="infty-run"
+        d="M20,30
+           C20,14 44,14 60,30
+           S100,46 100,30
+           S76,14 60,30
+           S20,46 20,30" />
+    </svg>
+  </div>
+
+  <div class="sun-block">
+    <span class="sun-icon">☾</span>
+    <span id="sunset-t">--:--</span>
+    </div>
+    </div>
+    </div>
+  </div>
+    <!-- RT -->
+    <div class="panel">
+      <h2>CPU & RAM</h2>
+      <div class="row">
+        <span class="badge" id="cpuText">CPU: --%</span>
+        <span class="badge" id="ramText">RAM: --%</span>
+      </div>
+      <div class="chartWrap"><canvas id="chartCpuRam"></canvas></div>
+    </div>
+<!-- LB MARKETS (NAPRAWIONE) -->
+<div class="panel" id="panel-markets">
+  <h2>Markets</h2>
+
+  <div class="markets">
+    <!-- TICKER -->
+    <div class="ticker" id="fx-ticker">
+      <div class="ticker-track" id="fx-track"></div>
+    </div>
+
+    <!-- TICKER (STOCKS) – wolniejszy -->
+<div class="ticker ticker--slow" id="stk-ticker">
+  <div class="ticker-track" id="stk-track"></div>
+</div>
+
+
+<!-- 4-kolumnowy układ: Tokyo | London | New York | Waluta (po PRAWEJ) -->
+<div class="mk-grid-4" id="mkSessions">
+<!-- TOKYO -->
+<div class="sess" id="sess-tokyo">
+  <div class="bar"></div>
+  <div class="city">Tokyo</div>
+  <div class="clock">--:--</div>
+</div>
+
+<!-- LONDON -->
+<div class="sess" id="sess-london">
+  <div class="bar"></div>
+  <div class="city">London</div>
+  <div class="clock">--:--</div>
+</div>
+
+<!-- NEW YORK -->
+<div class="sess" id="sess-ny">
+  <div class="bar"></div>
+  <div class="city">NYC</div>
+  <div class="clock">--:--</div>
+</div>
+
+  <!-- WALUTA (morph) — skrajnie po PRAWEJ -->
+  <div class="symbol-center" id="symWrap">
+    <div id="mkMorph">
+      <span id="mkText1" class="mkText"></span>
+      <span id="mkText2" class="mkText"></span>
+    </div>
+
+    <!-- (opcjonalnie mogą zostać ukryte starymi regułami CSS) -->
+    <span class="symbol active" data-char="$"><span class="glyph">$</span><span class="glyph-shine">$</span></span>
+    <span class="symbol" data-char="€"><span class="glyph">€</span><span class="glyph-shine">€</span></span>
+    <span class="symbol" data-char="₿"><span class="glyph">₿</span><span class="glyph-shine">₿</span></span>
+    <span class="symbol" data-char="¥"><span class="glyph">¥</span><span class="glyph-shine">¥</span></span>
+  </div>
+</div>
+</div>
+</div>
+    <!-- RB -->
+    <div class="panel">
+      <h2>System</h2>
+      <div class="stat" id="extra">Uptime: --\nDisk: --</div>
+      <div class="waveWrap">
+        <canvas id="waveCanvas"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- PERFORMANCE (siatka 2×2, maksymalne canvasy) -->
+  <div class="grid" id="view-perf" data-tab="perf" style="display:none;">
+    <!-- CPU -->
+    <div class="panel">
+      <h2>CPU</h2>
+      <div class="row"><span class="badge" id="cpuText_perf">CPU: --%</span></div>
+      <div class="chartWrap"><canvas id="chartCpu_perf"></canvas></div>
+    </div>
+    <!-- RAM -->
+    <div class="panel">
+      <h2>RAM</h2>
+      <div class="row"><span class="badge" id="ramText_perf">RAM: --%</span></div>
+      <div class="chartWrap"><canvas id="chartRam_perf"></canvas></div>
+    </div>
+    <!-- Network -->
+    <div class="panel">
+      <h2>Network</h2>
+      <div class="row">
+        <span class="badge" id="downText_perf">Down: -- kB/s</span>
+        <span class="badge" id="upText_perf">Up: -- kB/s</span>
+      </div>
+      <div class="chartWrap"><canvas id="chartNet_perf"></canvas></div>
+    </div>
+  <!-- GPU & Temps -->
+<div class="panel compact">
+  <h2>GPU & Temps</h2>
+  <div class="row" style="align-items:center">
+    <span class="badge" id="gpuText_perf">GPU: --%</span>
+    <span class="badge" id="gpuTemp_perf">GPU Temp: --°C</span>
+    <span class="badge" id="cpuTemp_perf">CPU Temp: --°C</span>
+  </div>
+  <div class="chartWrap"><canvas id="chartGpu_perf"></canvas></div>
+</div>
+</div>
+<!-- NOW PLAYING (Spotify-only) -->
+<div class="grid" id="view-now" data-tab="now" style="display:none; grid-template-columns: 1fr; grid-template-rows: 1fr;">
+  <div class="panel" style="grid-column:1 / span 2; display:flex; align-items:center; justify-content:center;">
+<div class="glass now-wrap" style="padding:18px;">
+  <div class="art-wrap">
+    <img id="art" src="" alt="art" class="art" />
+    <div class="art-hole"></div>
+  </div>
+  <div class="np-info now-col">
+    <div id="np-title"   class="np-title">—</div>
+    <div id="np-artist"  class="np-meta">—</div>
+    <div class="np-divider"></div>
+    <div id="np-album"   class="np-meta">—</div>
+
+    <div class="progress">
+      <div id="progress-bar" class="progress-bar"></div>
+    </div>
+    <div class="time-row">
+      <span id="t-cur">0:00</span>
+      <span id="t-end">0:00</span>
+    </div>
+  </div>
+</div>
+<!-- VISUALIZER -->
+<div style="width:100%; max-width:900px; margin-top:20px; align-self:stretch;">
+  <div id="vizWrap">
+  <canvas id="visualizer"></canvas>
+  </div>
+</div>
+  </div>
+</div>
+
+  <!-- EXTRA (placeholder) -->
+  <div class="grid" id="view-extra" data-tab="extra" style="display:none;">
+    <div class="panel" style="grid-column:1 / span 2;">
+      <h2>Extra</h2>
+      <div class="stat">soonTM</div>
+    </div>
+  </div>
+
+  <script>
+      /* // ===== DEBUG SWITCH =====
+      window.__DBG = true;
+      function dbg(...a){ if(window.__DBG) console.log("[DASH]", ...a); } */
+
+    // ========= CLOCK =========
+      // ---- FLUID CLOCK ROLLERS (fixed) ----
+(function initFluidClock(){
+  const clock = document.getElementById('clock');
+  if(!clock) return;
+
+  // Zbuduj rolki 0-9
+  clock.querySelectorAll('.digit .reel').forEach(reel=>{
+    if (reel.children.length) return;
+    for (let i=0;i<10;i++){
+      const s=document.createElement('span');
+      s.textContent=String(i);
+      reel.appendChild(s);
+    }
+  });
+
+  async function updateSun(){
+  try{
+    const lat = 50.3568, lon = 20.0274;
+    const r = await fetch(`https://api.sunrise-sunset.org/json?lat=${lat}&lng=${lon}&formatted=0`);
+    const d = await r.json();
+    if(!d.results) return;
+
+    const opts = { hour:'2-digit', minute:'2-digit' };
+    const s = new Date(d.results.sunrise).toLocaleTimeString("pl-PL", opts);
+    const e = new Date(d.results.sunset ).toLocaleTimeString("pl-PL", opts);
+
+    const sr = document.getElementById("sunrise-t");
+    const ss = document.getElementById("sunset-t");
+    if (sr) sr.textContent = s;
+    if (ss) ss.textContent = e;
+  }catch(err){
+    console.warn("sun API fail", err);
+  }
+}
+updateSun();
+setInterval(updateSun, 3600*1000);
+
+// ——— Auto-fit do jednej linii (zmniejsza, aż się zmieści) ———
+function fitOneLine(el, {max=40, min=14} = {}){
+  if(!el) return;
+  // zacznij od maksymalnej czcionki
+  el.style.fontSize = max + 'px';
+  // jeśli nie mieści się w jednej linii, zmniejszaj
+  while (el.scrollWidth > el.clientWidth && max > min){
+    max -= 1;
+    el.style.fontSize = max + 'px';
+  }
+}
+
+// wywołania po aktualizacjach treści i na resize
+function refitClockTexts(){
+  fitOneLine(document.getElementById('date'),      {max: 34, min: 16});
+  fitOneLine(document.getElementById('sun-times'), {max: 28, min: 14});
+}
+window.addEventListener('resize', refitClockTexts);
+
+
+  // Mapy: wrapper + reel po "data-unit"
+  const wrappers = {
+    h1: clock.querySelector('.digit[data-unit="h1"]'),
+    h2: clock.querySelector('.digit[data-unit="h2"]'),
+    m1: clock.querySelector('.digit[data-unit="m1"]'),
+    m2: clock.querySelector('.digit[data-unit="m2"]'),
+    s1: clock.querySelector('.digit[data-unit="s1"]'),
+    s2: clock.querySelector('.digit[data-unit="s2"]'),
+  };
+  const reels = {
+    h1: wrappers.h1?.querySelector('.reel'),
+    h2: wrappers.h2?.querySelector('.reel'),
+    m1: wrappers.m1?.querySelector('.reel'),
+    m2: wrappers.m2?.querySelector('.reel'),
+    s1: wrappers.s1?.querySelector('.reel'),
+    s2: wrappers.s2?.querySelector('.reel'),
+  };
+
+  function setDigit(unit, val){
+    const wrapper = wrappers[unit];
+    const reel    = reels[unit];
+    if(!wrapper || !reel) return;
+
+    const h = wrapper.clientHeight || parseFloat(getComputedStyle(wrapper).height) || 0;
+    const from = reel._y || 0;
+    const to   = -h * val;
+
+    reel.animate([
+      { transform: `translateY(${from}px)` },
+      { transform: `translateY(${to}px)` }
+    ], { duration: 320, easing: 'cubic-bezier(.22,.61,.36,1)' });
+
+    reel.style.transform = `translateY(${to}px)`;
+    reel._y = to;
+
+    wrapper.classList.add('changing');
+    clearTimeout(wrapper._to);
+    wrapper._to = setTimeout(()=>wrapper.classList.remove('changing'), 220);
+  }
+
+  function updateDate(){
+    const d=document.getElementById('date');
+    if (d) d.textContent = new Date().toLocaleDateString("pl-PL",{
+      weekday:"long", day:"numeric", month:"long", year:"numeric"
+    });
+    refitClockTexts();
+  }
+
+  function tick(){
+    const now = new Date();
+    const h = now.getHours().toString().padStart(2,'0');
+    const m = now.getMinutes().toString().padStart(2,'0');
+    const s = now.getSeconds().toString().padStart(2,'0');
+
+    setDigit('h1', Number(h[0]));
+    setDigit('h2', Number(h[1]));
+    setDigit('m1', Number(m[0]));
+    setDigit('m2', Number(m[1]));
+    setDigit('s1', Number(s[0]));
+    setDigit('s2', Number(s[1]));
+
+    updateDate();
+  }
+
+  tick();
+  setInterval(tick, 1000);
+})();
+
+
+    // ========= COMMON CHARTS =========
+    const commonOpts = {
+      responsive:true, animation:false,
+      maintainAspectRatio: false,
+      plugins:{ legend:{ labels:{ color:'#fff' } } },
+      scales:{
+        x:{ ticks:{ color:'#888' }, grid:{ color:'#222' } },
+        y:{ ticks:{ color:'#888' }, grid:{ color:'#222' }, min:0, max:100 }
+      }
+    };
+    function makeChart(id, config){
+      const el = document.getElementById(id); if(!el) return null;
+      const ctx = el.getContext('2d'); if(!ctx) return null;
+      return new Chart(ctx, config);
+    }
+
+    // CLOCK charts
+    const chartCpuRam = makeChart('chartCpuRam',{
+      type:'line',
+      data:{ labels:[], datasets:[
+        { label:'CPU %', borderColor:'#00ff88', backgroundColor:'rgba(0,255,136,0.2)', data:[], fill:true, tension:0.3 },
+        { label:'RAM %', borderColor:'#ffaa00', backgroundColor:'rgba(255,170,0,0.2)', data:[], fill:true, tension:0.3 }
+      ]},
+      options:commonOpts
+    });
+    const chartNet = makeChart('chartNet',{
+      type:'line',
+      data:{ labels:[], datasets:[
+        { label:'Down kB/s', borderColor:'#33aaff', backgroundColor:'rgba(51,170,255,0.2)', data:[], fill:true, tension:0.3 },
+        { label:'Up kB/s',   borderColor:'#ff66cc', backgroundColor:'rgba(255,102,204,0.2)', data:[], fill:true, tension:0.3 }
+      ]},
+      options:{...commonOpts, scales:{...commonOpts.scales, y:{...commonOpts.scales.y, beginAtZero:true}}}
+    });
+
+    // PERFORMANCE charts (2×2)
+    const chartCpu_perf = makeChart('chartCpu_perf',{
+      type:'line',
+      data:{ labels:[], datasets:[
+        { label:'CPU %', borderColor:'#00ff88', backgroundColor:'rgba(0,255,136,0.2)', data:[], fill:true, tension:0.3 }
+      ]},
+      options:commonOpts
+    });
+    const chartRam_perf = makeChart('chartRam_perf',{
+      type:'line',
+      data:{ labels:[], datasets:[
+        { label:'RAM %', borderColor:'#ffaa00', backgroundColor:'rgba(255,170,0,0.2)', data:[], fill:true, tension:0.3 }
+      ]},
+      options:commonOpts
+    });
+    const chartNet_perf = makeChart('chartNet_perf',{
+      type:'line',
+      data:{ labels:[], datasets:[
+        { label:'Down kB/s', borderColor:'#33aaff', backgroundColor:'rgba(51,170,255,0.2)', data:[], fill:true, tension:0.3 },
+        { label:'Up kB/s',   borderColor:'#ff66cc', backgroundColor:'rgba(255,102,204,0.2)', data:[], fill:true, tension:0.3 }
+      ]},
+      options:{...commonOpts, scales:{...commonOpts.scales, y:{...commonOpts.scales.y, beginAtZero:true}}}
+    });
+const chartGpu_perf = makeChart('chartGpu_perf',{
+  type:'line',
+  data:{ labels:[], datasets:[
+    { label:'GPU %',       borderColor:'#66ccff', backgroundColor:'rgba(102,204,255,0.2)', data:[], fill:true, tension:0.3, pointRadius:0 },
+    { label:'GPU Temp °C', borderColor:'#ff4444', backgroundColor:'rgba(255,68,68,0.2)',  data:[], fill:true, tension:0.3, pointRadius:0 },
+    { label:'CPU Temp °C', borderColor:'#ffaa00', backgroundColor:'rgba(255,170,0,0.2)', data:[], fill:true, tension:0.3, pointRadius:0 }
+  ]},
+  options:{
+    ...commonOpts,
+    maintainAspectRatio:false,
+    layout:{ padding:{ top:0, right:4, bottom:2, left:4 } },
+    plugins:{
+      legend:{
+        display:true,
+        position:'top',
+        labels:{
+          color:'#fff',
+          boxWidth:26,
+          boxHeight:12,
+          padding:12
+        }
+      }
+    },
+    scales:{
+      x:{ ticks:{ color:'#888' }, grid:{ color:'#222' } },
+      y:{ ticks:{ color:'#888' }, grid:{ color:'#222' }, min:0, max:100 }
+    }
+  }
+});
+
+const FX_BARS = [
+  { pair:'EUR/PLN', id:'bar-eurpln', base:'EUR', quote:'PLN' },
+  { pair:'USD/PLN', id:'bar-usdpln', base:'USD', quote:'PLN' },
+  { pair:'EUR/USD', id:'bar-eurusd', base:'EUR', quote:'USD' },
+];
+
+function fmtFx(n){ return (Math.round(n*10000)/10000).toFixed(4); }
+function fmtDelta(p){
+  const ap = Math.abs(p);
+  if (ap>0 && ap<0.01) return '±0.01%';
+  return (p>0?'+':'') + ap.toFixed(2) + '%';
+}
+
+function buildTickerRow(data){
+  const track = document.getElementById('fx-track');
+  if (!track) return;
+  const row = [];
+  for (let k=0;k<2;k++){
+    for (const it of data){
+      const wrap = document.createElement('span');
+      wrap.className = 'fx-item';
+
+      const spPair  = document.createElement('span');
+      spPair.className = 'fx-pair';
+      spPair.textContent = it.pair;
+
+      const spPrice = document.createElement('span');
+      spPrice.className = 'fx-price';
+      spPrice.textContent = fmtFx(it.price);
+
+      const spDelta = document.createElement('span');
+      spDelta.className = 'fx-delta' + (it.changePct>0 ? ' fx-up' : it.changePct<0 ? ' fx-down' : '');
+      spDelta.textContent = (it.changePct>0?'▲ ':it.changePct<0?'▼ ':'• ') + fmtDelta(it.changePct);
+
+      wrap.append(spPair, spPrice, spDelta);
+      row.push(wrap);
+    }
+  }
+  track.replaceChildren(...row);
+  // restart animacji
+  track.style.animation = 'none'; void track.offsetWidth;
+  track.style.animation = 'fx-scroll 24s linear infinite';
+}
+
+async function fetchFX(){
+  const trackMsg = (msg)=>{
+    const track = document.getElementById('fx-track');
+    if (!track) return;
+    const s = document.createElement('span');
+    s.className = 'fx-item';
+    s.textContent = msg;
+    track.replaceChildren(s);
+  };
+  trackMsg('Loading…');
+
+  // --- helpers ---
+  const ymd = d => d.toISOString().slice(0,10);
+  const ymdOffset = (days)=>{ const d=new Date(); d.setDate(d.getDate()-days); return ymd(d); };
+
+  async function j(url){
+    const r = await fetch(url, {cache:'no-store', mode:'cors'});
+    if (!r.ok) throw new Error('HTTP '+r.status);
+    return r.json();
+  }
+
+  // liczymy % z zabezpieczeniem na marginalne różnice
+  const pct = (now, prev)=>{
+    const EPS = 1e-9;
+    if (!Number.isFinite(now) || !Number.isFinite(prev) || Math.abs(prev) < EPS) return 0;
+    return (now/prev - 1) * 100;
+  };
+
+  // ---- Provider #1: exchangerate.host ----
+  async function fromExchangerateHost(){
+    // latest
+    const j1 = await j('https://api.exchangerate.host/latest?base=EUR&symbols=PLN,USD');
+    const j2 = await j('https://api.exchangerate.host/latest?base=USD&symbols=PLN');
+
+    let eur_pln_prev = j1.rates.PLN, eur_usd_prev = j1.rates.USD, usd_pln_prev = j2.rates.PLN;
+
+    // znajdź najbliższy DZIEŃ WSTECZ z innymi kursami (max 10 dni)
+    for (let back=1; back<=5; back++){
+      const d1 = await j(`https://api.exchangerate.host/${ymdOffset(back)}?base=EUR&symbols=PLN,USD`);
+      const d2 = await j(`https://api.exchangerate.host/${ymdOffset(back)}?base=USD&symbols=PLN`);
+      eur_pln_prev = d1.rates.PLN; eur_usd_prev = d1.rates.USD; usd_pln_prev = d2.rates.PLN;
+
+      const diff =
+        Math.abs((j1.rates.PLN ?? 0) - eur_pln_prev) > 1e-6 ||
+        Math.abs((j1.rates.USD ?? 0) - eur_usd_prev) > 1e-6 ||
+        Math.abs((j2.rates.PLN ?? 0) - usd_pln_prev) > 1e-6;
+
+      if (diff) break;
+    }
+
+    return {
+      eur_pln: j1.rates.PLN, eur_usd: j1.rates.USD, usd_pln: j2.rates.PLN,
+      eur_pln_prev, eur_usd_prev, usd_pln_prev
+    };
+  }
+
+  // ---- Provider #2 (fallback): frankfurter.app (ECB) ----
+  async function fromFrankfurter(){
+    // latest
+    const jf = await j('https://api.frankfurter.app/latest?from=EUR&to=USD,PLN');
+    const u  = await j('https://api.frankfurter.app/latest?from=USD&to=PLN');
+
+    let eur_pln_prev = jf.rates.PLN, eur_usd_prev = jf.rates.USD, usd_pln_prev = u.rates.PLN;
+
+    // cofaj się aż znajdziesz inny fixing (ECB zwraca poprzedni dzień roboczy – i tak pętlę warto mieć)
+    for (let back=1; back<=10; back++){
+      const pf = await j(`https://api.frankfurter.app/${ymdOffset(back)}?from=EUR&to=USD,PLN`);
+      const up = await j(`https://api.frankfurter.app/${ymdOffset(back)}?from=USD&to=PLN`);
+      eur_pln_prev = pf.rates.PLN; eur_usd_prev = pf.rates.USD; usd_pln_prev = up.rates.PLN;
+
+      const diff =
+        Math.abs((jf.rates.PLN ?? 0) - eur_pln_prev) > 1e-6 ||
+        Math.abs((jf.rates.USD ?? 0) - eur_usd_prev) > 1e-6 ||
+        Math.abs((u.rates.PLN  ?? 0) - usd_pln_prev) > 1e-6;
+
+      if (diff) break;
+    }
+
+    return {
+      eur_pln: jf.rates.PLN, eur_usd: jf.rates.USD, usd_pln: u.rates.PLN,
+      eur_pln_prev, eur_usd_prev, usd_pln_prev
+    };
+  }
+
+  try{
+    let d;
+    try { d = await fromExchangerateHost(); }
+    catch { d = await fromFrankfurter(); }
+
+    // walidacja
+    if (![d.eur_pln, d.eur_usd, d.usd_pln].every(Number.isFinite)){
+      trackMsg('Offline'); return;
+    }
+
+    const out = [
+      { pair:'EUR/PLN', id:'bar-eurpln', price: d.eur_pln, changePct: pct(d.eur_pln, d.eur_pln_prev) },
+      { pair:'USD/PLN', id:'bar-usdpln', price: d.usd_pln, changePct: pct(d.usd_pln, d.usd_pln_prev) },
+      { pair:'EUR/USD', id:'bar-eurusd', price: d.eur_usd, changePct: pct(d.eur_usd, d.eur_usd_prev) },
+    ];
+
+    // ticker + mini-wykresy
+    buildTickerRow(out);
+    if (typeof updateStrengthFrom === 'function') updateStrengthFrom(out);
+    if (typeof pushSpark === 'function') { out.forEach(it => pushSpark(it.pair, it.price)); }
+    if (typeof redrawSparks === 'function') redrawSparks();
+
+    // wartości pod tickerem
+    const setVal = (id, v)=>{ const el = document.getElementById(id); if (el) el.textContent = fmtFx(v); };
+    setVal('bar-eurpln', d.eur_pln);
+    setVal('bar-usdpln', d.usd_pln);
+    setVal('bar-eurusd', d.eur_usd);
+
+  }catch(e){
+    console.warn('fetchFX error', e);
+    trackMsg('Offline');
+  }
+}
+
+// start + co godzinę
+fetchFX();
+setInterval(fetchFX, 60*60*1000);
+
+// ========= TABS =========
+const VIEWS = ["clock","perf","now","extra"];
+let activeTab = localStorage.getItem("dashTab") || "clock";
+
+function applyTab(){
+  // 1) Podświetlenie przycisków
+  document.querySelectorAll('#tabs .badge').forEach(b=>{
+    const t = b.getAttribute('data-tab');
+    if (t === activeTab) b.classList.add('active');
+    else b.classList.remove('active');
+  });
+
+  // 2) Przełączanie widoków
+  document.querySelectorAll('.grid[data-tab]').forEach(g=>{
+    g.style.display = (g.getAttribute('data-tab') === activeTab) ? 'grid' : 'none';
+  });
+
+  localStorage.setItem("dashTab", activeTab);
+  if (activeTab === 'clock' && typeof window.__wave_on_show === 'function') {
+  window.__wave_on_show();
+
+if (typeof toggleVisualizerReal === 'function') {
+  if (activeTab !== 'now') {
+    toggleVisualizerReal(false);
+  } else {
+    // poczekaj 2 klatki aż layout się ułoży, wtedy odpal
+    const last = (window.__lastNowStatus || '').toLowerCase();
+    requestAnimationFrame(()=>requestAnimationFrame(()=>{
+      toggleVisualizerReal(last === 'playing');
+    }));
+  }
+}
+}
+
+  // 3) Wskaźnik + bąbelek (LIQUID) — LICZYMY RAZ, poza pętlą
+  window.__tabPrevCenter = window.__tabPrevCenter ?? null;
+
+  const indicator = document.getElementById('tab-indicator');
+  const bubble    = document.getElementById('tab-bubble');
+  const tabsEl    = document.getElementById('tab-row');
+  const activeEl  = document.querySelector(`#tabs .badge[data-tab="${activeTab}"]`);
+
+  if (indicator && bubble && tabsEl && activeEl) {
+    const tRect  = tabsEl.getBoundingClientRect();
+    const aRect  = activeEl.getBoundingClientRect();
+    const x      = aRect.left - tRect.left;
+    const w      = aRect.width;
+    const center = x + w/2;
+
+    // wskaźnik (prostokąt)
+    indicator.style.opacity   = '1';
+    indicator.style.transform = `translateX(${x}px)`;
+    indicator.style.width     = `${w}px`;
+
+    // bąbelek (liquid przejazd)
+    if (window.__tabPrevCenter !== null) {
+      const from = window.__tabPrevCenter;
+      const to   = center;
+      const dist = Math.abs(to - from);
+
+      bubble.style.opacity = '1';
+      bubble.animate([
+        { transform: `translateX(${from}px) scale(0.9)` },
+        { transform: `translateX(${(from+to)/2}px) scale(${1.0 + Math.min(0.3, dist/400)})` },
+        { transform: `translateX(${to}px) scale(0.9)` }
+      ], {
+        duration: Math.min(420, 240 + dist),
+        easing: 'cubic-bezier(.22,.61,.36,1)'
+      });
+
+      bubble.style.transform = `translateX(${to}px) scale(0.9)`;
+      clearTimeout(window.__tabBubbleTO);
+      window.__tabBubbleTO = setTimeout(()=>{ bubble.style.opacity = '0'; }, 420);
+    } else {
+      // pierwsze ustawienie — bez animacji
+      bubble.style.opacity   = '0';
+      bubble.style.transform = `translateX(${center}px) scale(0.9)`;
+    }
+    window.__tabPrevCenter = center;
+  }
+}
+
+// Listenery
+document.querySelectorAll('#tabs .badge').forEach(b=>{
+  b.addEventListener('click', ()=>{
+    activeTab = b.getAttribute('data-tab');
+    applyTab();
+  });
+});
+window.addEventListener('keydown', e=>{
+  if(e.altKey && !e.shiftKey && !e.ctrlKey){
+    const map={'1':'clock','2':'perf','3':'now','4':'extra'};
+    if(map[e.key]){ activeTab = map[e.key]; applyTab(); }
+  }
+  if(e.ctrlKey && !e.altKey && !e.shiftKey){
+    if(e.key==='ArrowRight'){ const i=VIEWS.indexOf(activeTab); activeTab=VIEWS[(i+1)%VIEWS.length]; applyTab(); }
+    if(e.key==='ArrowLeft'){  const i=VIEWS.indexOf(activeTab); activeTab=VIEWS[(i-1+VIEWS.length)%VIEWS.length]; applyTab(); }
+  }
+});
+applyTab();
+window.addEventListener('resize', applyTab);
+window.addEventListener('load', applyTab);
+
+
+// ========= NOW PLAYING (Spotify only, robust) =========
+let npCache = {
+  status: "stopped",
+  position_sec: 0,
+  length_sec: 0,
+  trackKey: "",
+  ts: Date.now()
+};
+
+function fmtTime(sec){
+  if (!isFinite(sec) || sec < 0) sec = 0;
+  const m = Math.floor(sec/60), s = Math.floor(sec%60);
+  return `${m}:${s.toString().padStart(2,'0')}`;
+}
+
+async function fetchNowPlaying(){
+  try{
+    const r = await fetch("nowplaying.json?_=" + Date.now(), { cache: "no-store" });
+    if (!r.ok) return;
+    const d = await r.json();
+
+    const t  = document.getElementById('np-title');
+    const ar = document.getElementById('np-artist');
+    const al = document.getElementById('np-album');
+    const art= document.getElementById('art');
+    const bar= document.getElementById('progress-bar');
+    const tCur = document.getElementById('t-cur');
+    const tEnd = document.getElementById('t-end');
+
+    const status = (d?.status || 'stopped').toLowerCase();
+    const title  = d?.title  || '';
+    const artist = d?.artist || '';
+    const album  = d?.album  || '';
+    const artUrl = d?.art    || '';
+    const len    = Number(d?.length_sec)  || 0;
+    const pos    = Math.min(Number(d?.position_sec) || 0, len);
+    // klucz aktualnego utworu (zanim nadpiszemy npCache)
+    const newKey = [title, artist, album, len, artUrl].join('|');
+    const isTrackChanged = (newKey !== npCache.trackKey);
+
+
+    // brak utworu -> wyczyść
+    if (status === 'stopped' || (!title && !artist && !album)) {
+      if (t)  t.textContent = '—';
+      if (ar) ar.textContent = '—';
+      if (al) al.textContent = '—';
+      if (art){ art.src=''; art.classList.remove('playing'); }
+      if (bar) bar.style.width = '0%';
+      if (tCur) tCur.textContent = '0:00';
+      if (tEnd) tEnd.textContent = '0:00';
+
+      // wyzeruj cache
+      npCache = { status:'stopped', position_sec:0, length_sec:0, trackKey:"", ts: Date.now() };
+      // oraz realny wizualizer
+      if (typeof toggleVisualizerReal === 'function') toggleVisualizerReal(false);
+      return;
+    }
+
+    // Teksty / okładka
+    if (t)  t.textContent = title;
+    if (ar) ar.textContent = artist;
+    if (al) al.textContent = album;
+    if (art){
+    // jeżeli zmienił się URL okładki, podmień i po załadowaniu policz ambient
+if (artUrl && art.src !== artUrl) {
+  art.crossOrigin = "anonymous"; // <<< DODANE (musi być PRZED src)
+  art.onload = () => { if (isTrackChanged) setAmbientFromArtImage(art); };
+art.onerror = () => {
+  const wrap = document.querySelector('.now-wrap');
+  if (wrap) wrap.style.setProperty('--amb-alpha', '0');
+};
+  art.src = artUrl;
+}
+
+    if (status === 'playing') art.classList.add('playing'); else art.classList.remove('playing');
+    }
+
+    // Ustaw bazę dla paska i sekundnika (bez animacji)
+    npCache.status       = status;
+    npCache.position_sec = pos;
+    npCache.length_sec   = len;
+    npCache.trackKey     = [title, artist, album, len].join('|');
+    npCache.ts           = Date.now();
+
+    if (tEnd) tEnd.textContent = fmtTime(len);
+    if (tCur) tCur.textContent = fmtTime(Math.floor(pos + 1e-6));
+    if (bar)  bar.style.width  = (len > 0 ? (pos/len)*100 : 0) + '%';
+
+    // real audio visualizer: on/off
+    if (typeof toggleVisualizerReal === 'function') {
+      toggleVisualizerReal(status === 'playing');
+    }
+  } catch(e) { /* ignore */ }
+}
+
+
+// lokalny „zegar” — tylko gdy playing
+let lastSecondShown = null;
+setInterval(()=>{
+  if ((npCache.status||'') !== 'playing') return;
+
+  const now = Date.now();
+  const dt  = (now - npCache.ts)/1000;
+  if (dt <= 0) return;
+
+  npCache.ts = now;
+  npCache.position_sec = Math.min(npCache.position_sec + dt, npCache.length_sec);
+
+  // pasek
+  const bar  = document.getElementById('progress-bar');
+  if (bar && npCache.length_sec > 0) {
+    const pct = (npCache.position_sec/npCache.length_sec)*100;
+    bar.style.width = `${Math.max(0, Math.min(100, pct))}%`;
+  }
+
+  // sekundnik — TYLKO gdy zmieni się pełna sekunda, bez animacji
+  const secNow = Math.floor(npCache.position_sec + 1e-6);
+  if (secNow !== lastSecondShown) {
+    const tCur = document.getElementById('t-cur');
+    if (tCur) tCur.textContent = fmtTime(secNow);
+    lastSecondShown = secNow;
+  }
+  {
+  const progress = document.querySelector('.progress');
+  if (progress) {
+    const pct = (npCache.length_sec > 0)
+      ? (npCache.position_sec / npCache.length_sec) * 100
+      : 0;
+    progress.style.setProperty('--pct', pct + '%');
+    progress.classList.toggle('playing', (npCache.status||'') === 'playing');
+    // --- losowa iskra przy krawędzi ---
+if ((npCache.status||'') === 'playing' && Math.random() < 0.25) {
+  const s = document.createElement('span');
+  s.className = 'spark';
+  s.style.left = `calc(${pct}% - 3px)`;   // pozycja w % paska
+  s.style.top  = (Math.random()*8 + 6) + 'px';
+  s.style.setProperty('--dx', (10 + Math.random()*18) + 'px');
+  s.style.setProperty('--dy', (-8 - Math.random()*10) + 'px');
+  progress.appendChild(s);
+  setTimeout(()=> s.remove(), 850);
+}
+
+  }
+}
+}, 250);
+
+
+// cykliczny fetch
+setInterval(fetchNowPlaying, 1000);
+fetchNowPlaying();
+
+function setAmbientFromArtImage(imgEl){
+  try{
+    if (!imgEl || !imgEl.naturalWidth) return;
+// ==== AREA-AWARE ACCENTS (24 hue bins + grayscale) ====
+const s = 64;
+const c = document.createElement('canvas'); c.width = s; c.height = s;
+const ctx = c.getContext('2d', { willReadFrequently: true });
+ctx.drawImage(imgEl, 0, 0, s, s);
+const { data } = ctx.getImageData(0, 0, s, s);
+
+// pomocnicze
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+
+// 24 kosze hue (0..23) + 1 kosz "gray"
+const BINS = 24;
+const bins = Array.from({ length: BINS }, () => ({
+  count: 0, r: 0, g: 0, b: 0, satSum: 0, valSum: 0
+}));
+const gray = { count: 0, r: 0, g: 0, b: 0, valSum: 0 };
+
+let rAvg = 0, gAvg = 0, bAvg = 0, nAvg = 0;
+
+for (let i = 0; i < data.length; i += 4) {
+  const R = data[i], G = data[i + 1], B = data[i + 2], A = data[i + 3];
+  if (A < 16) continue;
+
+  rAvg += R; gAvg += G; bAvg += B; nAvg++;
+
+  const mx = Math.max(R, G, B), mn = Math.min(R, G, B);
+  const val = mx / 255;                               // 0..1
+  const sat = mx === 0 ? 0 : (mx - mn) / mx;          // 0..1
+
+  // bardzo białe/czarne neutralne → do kosza gray (pilnujemy powierzchni)
+  const nearWhite = (sat < 0.20 && val > 0.82) || (sat < 0.28 && val > 0.90);
+  const nearBlack = (val < 0.10) || (sat < 0.12 && val < 0.14);
+  if (nearWhite || nearBlack) {
+    gray.count++; gray.r += R; gray.g += G; gray.b += B; gray.valSum += val;
+    continue;
+  }
+
+  // hue (0..360) -> 24 kosze
+  let h;
+  if (mx === mn) h = 0;
+  else if (mx === R) h = (60 * ((G - B) / (mx - mn)) + 360) % 360;
+  else if (mx === G) h = 60 * ((B - R) / (mx - mn)) + 120;
+  else h = 60 * ((R - G) / (mx - mn)) + 240;
+
+  const idx = Math.floor((h / 360) * BINS) % BINS;
+  const bin = bins[idx];
+  bin.count++; bin.r += R; bin.g += G; bin.b += B; bin.satSum += sat; bin.valSum += val;
+}
+
+const avg = nAvg ? [Math.round(rAvg / nAvg), Math.round(gAvg / nAvg), Math.round(bAvg / nAvg)] : [128,128,128];
+const lumaAvg = (avg[0]*0.2126 + avg[1]*0.7152 + avg[2]*0.0722) / 255;
+
+// ocena koszy: liczy się POWIERZCHNIA i jakość koloru
+// score = (area ratio) * (0.5 + 0.5*satMean) * (0.4 + 0.6*valMean)
+const total = bins.reduce((s, b) => s + b.count, 0) + gray.count;
+const scored = bins.map((b, i) => {
+  if (!b.count) return { i, score: 0, col: [0,0,0], sat:0, val:0, ar:0 };
+  const ar = b.count / Math.max(1, total);
+  const satMean = b.satSum / b.count;
+  const valMean = b.valSum / b.count;
+
+  // PATCH ▼ kara za „prawie biały” kosz (niska S, wysoka V)
+  let penalty = 1.0;
+  if (satMean < 0.22 && valMean > 0.82) penalty *= 0.15;
+
+  // (opcjonalnie) lekka kara dla żółci, jeśli są mało nasycone — to te fałszywe „żółte chmury”
+  const hueDeg = (i + 0.5) * (360 / BINS); // środek kosza
+  if (hueDeg > 35 && hueDeg < 75 && satMean < 0.30 && valMean > 0.75) penalty *= 0.35;
+
+  // nieco większa waga dla saturacji niż wcześniej
+  const score = ar * (0.4 + 0.6 * satMean) * (0.35 + 0.65 * valMean) * penalty;
+
+  return {
+    i,
+    score,
+    col: [Math.round(b.r / b.count), Math.round(b.g / b.count), Math.round(b.b / b.count)],
+    sat: satMean, val: valMean, ar
+  };
+}).sort((a,b)=> b.score - a.score);
+// PATCH ▼ odfiltruj bardzo mało nasycone „dominanty”
+const MIN_S = 0.22;
+const viable = scored.filter(b => b.score > 0 && b.sat >= MIN_S);
+
+// wybierz 2 różne akcenty: największy score + maksymalnie odległy hue (≥ ~60°)
+// jeżeli nic sensownego – fallback do bieli/szarości
+let p1 = null, p2 = null;
+if (viable.length) {
+  p1 = viable[0].col.slice();
+  let best = -1, idx = 0;
+  for (let k = 1; k < viable.length; k++) {
+    const b = viable[k];
+    const dr = b.col[0] - p1[0], dg = b.col[1] - p1[1], db = b.col[2] - p1[2];
+    const d2 = dr*dr + dg*dg + db*db;
+    if (d2 > best) { best = d2; idx = k; }
+  }
+  p2 = viable[idx].col.slice();
+} else if (scored[0] && scored[0].score > 0) {
+  // brak „żywych” – weź cokolwiek z listy
+  p1 = scored[0].col.slice();
+  p2 = (scored[1] ? scored[1].col.slice() : p1.slice());
+} else {
+  p1 = [255,255,255]; p2 = [190,190,190];
+}
+
+
+// jeżeli p1/p2 wciąż podobne – odsuń p2
+const dist2 = (a,b)=>{const dr=a[0]-b[0],dg=a[1]-b[1],db=a[2]-b[2]; return dr*dr+dg*dg+db*db;};
+if (dist2(p1,p2) < 32000) p2 = [p1[2]^80, p1[0]^80, p1[1]^80];
+
+// udział szarości (gdy okładka biała/szara → nie pozwolimy, by mała czerwona plamka „zalała” ambient)
+const grayRatio = gray.count / Math.max(1, total);
+
+// BOOST dla ciemnych okładek (czytelność paska)
+if (lumaAvg < 0.20) {
+  const boost = 2.1;
+  p1 = p1.map((v,i)=> i<3 ? Math.min(255, Math.round(v*boost + 35)) : v);
+  p2 = p2.map((v,i)=> i<3 ? Math.min(255, Math.round(v*boost + 35)) : v);
+}
+
+// dla bardzo jasnych/białych okładek — niech kolory paska będą JASNE (widoczne)
+if (lumaAvg > 0.85 || grayRatio > 0.65) {
+  const lighten = (col)=> col.map((v,i)=> i<3 ? Math.max(200, Math.round(0.6*255 + 0.4*v)) : v);
+  p1 = lighten(p1);
+  p2 = lighten(p2);
+}
+
+// ustaw kolory PASKA – PEŁNA alfa (brak „dymu”)
+document.documentElement.style.setProperty('--prog1', `rgba(${p1[0]},${p1[1]},${p1[2]},1)`);
+document.documentElement.style.setProperty('--prog2', `rgba(${p2[0]},${p2[1]},${p2[2]},1)`);
+
+// AMBIENT: tłumimy zależnie od ilości bieli/szarości, by „czerwona plamka” nie zalała całej karty
+const wrap = document.querySelector('.now-wrap');
+if (wrap) {
+  const shade = avg.map(v => Math.max(0, Math.round(v*0.35)));
+  // miksujemy akcent z odrobiną bieli, jeśli dużo gray
+  const mixWhite = (col, w) => col.map((v,i)=> i<3 ? Math.round((1-w)*v + w*255) : v);
+  const wFac = clamp((grayRatio - 0.4) / 0.5, 0, 1); // 0..1 rośnie od 40% szarości
+  const amb1 = mixWhite(p1, 0.35*wFac);
+  const amb2 = mixWhite(p2, 0.35*wFac);
+
+  wrap.style.setProperty('--amb1', `rgba(${amb1[0]},${amb1[1]},${amb1[2]},0.40)`);
+  wrap.style.setProperty('--amb2', `rgba(${amb2[0]},${amb2[1]},${amb2[2]},0.32)`);
+  wrap.style.setProperty('--amb3', `rgba(${shade[0]},${shade[1]},${shade[2]},0.26)`);
+
+  // siła ambientu: ciemne → mocniej, jasne/dużo bieli → słabiej
+  const base = 0.68 - (lumaAvg-0.5)*0.7;         // ~0.33..1.03
+  const byGray = 1 - 0.55*grayRatio;             // ~0.45..1
+  const alpha = clamp(base * byGray, 0.28, 0.70);
+  wrap.style.setProperty('--amb-alpha', String(alpha));
+}
+  }catch(e){ /* cicho – w kiosku nie spamujmy */ }
+}
+
+
+// ===== REAL AUDIO VISUALIZER (reads ~/dashboard/vis.json) =====
+let visCanvas=null, visCtx=null, visAnim=null;
+let visBands = new Array(32).fill(0);
+let visFetcher = null;
+let visWantsPlay = false;
+
+function visEnsureCtx(){
+  if (!visCanvas) visCanvas = document.getElementById("visualizer");
+  if (visCanvas && !visCtx) visCtx = visCanvas.getContext("2d");
+  return !!visCtx;
+}
+function visResize(){
+  if (!visEnsureCtx()) return;
+  visCanvas.width  = visCanvas.offsetWidth;
+  visCanvas.height = visCanvas.offsetHeight;
+}
+function visDraw(){
+  if (!visEnsureCtx()) return;
+  if (visCanvas.width === 0 || visCanvas.height === 0) visResize();
+
+  const ctx = visCtx, w = visCanvas.width, h = visCanvas.height;
+  ctx.clearRect(0,0,w,h);
+
+  // ładniejszy gradient słupków
+  const grad = ctx.createLinearGradient(0,0,0,h);
+  grad.addColorStop(0,   "#ffd27a");
+  grad.addColorStop(0.6, "#ffaa00");
+  grad.addColorStop(1,   "#774400");
+
+  const bars = visBands.length;
+  const barW = w / bars;
+
+  for (let i=0;i<bars;i++){
+    // lekki klient-side smoothing
+    const v = Math.max(0, Math.min(1, visBands[i]));
+    const bh = v * h;
+    const x  = i * barW;
+    const y  = h - bh;
+    ctx.fillStyle = grad;
+    ctx.fillRect(x + barW*0.2, y, barW*0.6, bh);
+  }
+
+  visAnim = requestAnimationFrame(visDraw);
+}
+async function visFetchLoop(){
+  try{
+    const r = await fetch("vis.json?_=" + Date.now());
+    if (!r.ok) return;
+    const d = await r.json();
+    if (!Array.isArray(d.bands)) return;
+
+    // łagodne dojście do nowych wartości (alpha mniejsze = gładsze)
+    const a = 0.35;
+    for (let i=0;i<visBands.length && i<d.bands.length;i++){
+      const nv = Number(d.bands[i] || 0);
+      visBands[i] = a*visBands[i] + (1-a)*nv;
+    }
+  } catch(_) {}
+}
+function isNowTabVisible(){
+  const v = document.getElementById("view-now");
+  return v && getComputedStyle(v).display !== "none";
+}
+function toggleVisualizerReal(shouldPlay){
+  visWantsPlay = !!shouldPlay;
+
+  if (!isNowTabVisible()){
+    // tab ukryty — wyłącz wszystko; wznowimy po powrocie
+    if (visAnim)    { cancelAnimationFrame(visAnim); visAnim=null; }
+    if (visFetcher) { clearInterval(visFetcher);     visFetcher=null; }
+    if (visEnsureCtx()) visCtx.clearRect(0,0,visCanvas.width,visCanvas.height);
+    return;
+  }
+
+  visResize();
+
+  if (visWantsPlay){
+    if (!visFetcher) visFetcher = setInterval(visFetchLoop, 50); // ~20 Hz
+    if (!visAnim)    visAnim    = requestAnimationFrame(visDraw); // 60 FPS rysowania
+  } else {
+    if (visAnim)    { cancelAnimationFrame(visAnim); visAnim=null; }
+    if (visFetcher) { clearInterval(visFetcher);     visFetcher=null; }
+    if (visEnsureCtx()) visCtx.clearRect(0,0,visCanvas.width,visCanvas.height);
+  }
+}
+window.addEventListener('resize', ()=>{
+  if (isNowTabVisible()) {
+    visResize();
+  }
+});
+(async function fxDebug(){
+  const box = document.createElement('div'); box.id = 'fx-debug';
+  const log = (html) => { box.insertAdjacentHTML('beforeend', html + '<br>'); };
+  document.body.appendChild(box);
+
+  log('<b>FX debug</b> · online: '+(navigator.onLine?'yes':'no'));
+
+  async function tryFetch(name, url, opts={}){
+    const t0 = performance.now();
+    try{
+      const r = await fetch(url, {cache:'no-store', mode:'cors', ...opts});
+      const t1 = performance.now();
+      if (!r.ok) { log(`<span class="err">${name}</span> → HTTP ${r.status} (${(t1-t0)|0} ms)`); return {ok:false, status:r.status}; }
+      // spróbuj JSON
+      let j=null; try{ j = await r.json(); }catch(_){}
+      log(`<span class="ok">${name}</span> → OK ${(t1-t0)|0} ms`);
+      return {ok:true, json:j};
+    }catch(e){
+      log(`<span class="err">${name}</span> → ${e.name}: ${e.message}`);
+      return {ok:false, error:e};
+    }
+  }
+
+  // 1) exchangerate.host (dzisiejsze)
+  await tryFetch('exchangerate.host EUR→PLN,USD',
+    'https://api.exchangerate.host/latest?base=EUR&symbols=PLN,USD');
+
+  await tryFetch('exchangerate.host USD→PLN',
+    'https://api.exchangerate.host/latest?base=USD&symbols=PLN');
+
+  // 2) endpointy historyczne (wczoraj) – często przechodzą, gdy fluctuation pada
+  const y = new Date(); y.setDate(y.getDate()-1);
+  const ymd = y.toISOString().slice(0,10);
+  await tryFetch(`history ${ymd} EUR→PLN,USD`,
+    `https://api.exchangerate.host/${ymd}?base=EUR&symbols=PLN,USD`);
+  await tryFetch(`history ${ymd} USD→PLN`,
+    `https://api.exchangerate.host/${ymd}?base=USD&symbols=PLN`);
+
+  // 3) NBP – często bywa OK z CORS (PLN)
+  await tryFetch('NBP tabela A',
+    'https://api.nbp.pl/api/exchangerates/tables/A?format=json');
+
+  // 4) CoinGecko – do BTC/ETH (na przyszłość)
+  await tryFetch('CoinGecko BTC',
+    'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd,pln');
+
+  log('<span class="muted">Jeśli wszystko tu czerwone → kiosk blokuje zewnętrzne żądania. Przejdź na lokalny plik fx.json (patrz sekcja 2).</span>');
+})();
+
+    // ========= STATS LOOP =========
+    let prevRx=null, prevTx=null, prevTs=null;
+    async function fetchData(){
+      try{
+        const r=await fetch("stats.json?_="+Date.now()); if(!r.ok) return;
+        const data=await r.json();
+        const nowLabel=new Date().toLocaleTimeString("pl-PL",{hour12:false});
+
+function shortenUptime(u){
+  if(!u || typeof u !== 'string') return "--";
+  // usuń "up " i przecinki
+  u = u.replace(/^up\s+/i,'').replace(/,/g,' ').trim();
+
+  // mapowanie słów -> skróty
+  const map = {
+    years:'y', year:'y',
+    months:'mo', month:'mo',
+    weeks:'w', week:'w',
+    days:'d', day:'d',
+    hours:'h', hour:'h',
+    minutes:'m', minute:'m',
+    seconds:'s', second:'s',
+    mins:'m', min:'m', secs:'s', sec:'s'
+  };
+  u = u.replace(/\b([a-ząćęłńóśźż]+)\b/gi, (m)=>{
+    return map[m.toLowerCase()] ?? m;
+  });
+
+  // redukuj spacje i obetnij do 3 segmentów
+  u = u.replace(/\s+/g,' ').trim();
+  const parts = u.split(' ');
+  return parts.slice(0,3).join(' ');
+}
+
+
+// ===== CPU / RAM (wygładzanie + bez "anty-zero") =====
+window.__lastCpu = Number.isFinite(window.__lastCpu) ? window.__lastCpu : 0;
+window.__lastRam = Number.isFinite(window.__lastRam) ? window.__lastRam : 0;
+
+const cpuRaw = Number(data.cpu);
+const ramRaw = Number(data.ram);
+
+// jeśli liczba -> bierzemy; jeśli NaN -> poprzednia wartość
+const cpuVal = Number.isFinite(cpuRaw) ? cpuRaw : window.__lastCpu;
+const ramVal = Number.isFinite(ramRaw) ? ramRaw : window.__lastRam;
+
+// proste wygładzenie IIR
+const alpha = 0.3;
+const cpuSm = alpha*cpuVal + (1-alpha)*window.__lastCpu;
+const ramSm = alpha*ramVal + (1-alpha)*window.__lastRam;
+
+window.__lastCpu = cpuSm;
+window.__lastRam = ramSm;
+
+// CLOCK badge
+const cpuText = document.getElementById('cpuText');
+const ramText = document.getElementById('ramText');
+if (cpuText) cpuText.textContent = `CPU: ${cpuSm.toFixed(0)}%`;
+if (ramText) ramText.textContent = `RAM: ${ramSm.toFixed(0)}%`;
+
+// CLOCK chart (← TU DODAJEMY RAM!)
+if (chartCpuRam) {
+  chartCpuRam.data.labels.push(nowLabel);
+  chartCpuRam.data.datasets[0].data.push(Number(cpuSm.toFixed(1))); // CPU
+  chartCpuRam.data.datasets[1].data.push(Number(ramSm.toFixed(1))); // RAM  ← NEW
+
+  if (chartCpuRam.data.labels.length > 30) {
+    chartCpuRam.data.labels.shift();
+    chartCpuRam.data.datasets.forEach(ds => ds.data.shift());
+  }
+  chartCpuRam.update();
+}
+
+// ===== WAVE (System panel) - smooth ver. =====
+(function initWave(){
+  const canvas = document.getElementById('waveCanvas');
+  if (!canvas) return;
+
+  const ctx = canvas.getContext('2d');
+  const DPR = Math.max(1, Math.floor(window.devicePixelRatio || 1));
+
+  const theme = {
+    color: '#ffaa00',
+    // niższy blur dla wyższego DPI (taniej)
+    glow:  DPR >= 2 ? 6 * DPR : 10 * DPR,
+    alpha: 0.9,
+  };
+
+  let w=0, h=0, mid=0, amp=0;
+  const speed = 4.2;   // rad/s – realna prędkość względem czasu (nie "na klatkę")
+  const waves = 5.14;  // ~ile garbów na szerokość
+
+  function resize(){
+    const cssW = canvas.clientWidth || 0;
+    const cssH = canvas.clientHeight || 0;
+    canvas.width  = Math.max(1, Math.floor(cssW * DPR));
+    canvas.height = Math.max(1, Math.floor(cssH * DPR));
+    ctx.setTransform(1,0,0,1,0,0);
+    ctx.scale(DPR, DPR);
+    w = cssW; h = cssH;
+    mid = h/2;
+    amp = Math.max(6, h * 0.25); // amplituda
+  }
+
+  function draw(tNow){
+    // rysuj tylko gdy widoczny widok "clock"
+    const gridClock = document.querySelector('.grid[data-tab="clock"]');
+    const visible = gridClock && getComputedStyle(gridClock).display !== 'none';
+    if (!visible) { requestAnimationFrame(draw); return; }
+
+    ctx.clearRect(0,0,w,h);
+
+    // faza zależna od czasu - płynna nawet gdy są dropy
+    const t = (tNow || performance.now()) / 1000; // sekundy
+    const phase = t * speed;
+
+    // główna linia
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = theme.color;
+    ctx.globalAlpha = theme.alpha;
+    ctx.shadowColor = theme.color;
+    ctx.shadowBlur = theme.glow;
+
+    ctx.beginPath();
+    // krok co 2 px (taniej)
+    for (let x = 0; x <= w; x += 2){
+      const tt = (x / w) * Math.PI * 2 * waves + phase;
+      const y  = mid + Math.sin(tt) * amp;
+      if (x === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+
+    // subtelne odbicie
+    ctx.lineWidth = 1;
+    ctx.globalAlpha = 0.35;
+    ctx.shadowBlur = Math.max(2, theme.glow * 0.4);
+
+    ctx.beginPath();
+    for (let x = 0; x <= w; x += 2){
+      const tt = (x / w) * Math.PI * 2 * waves + phase + 0.6;
+      const y  = mid + Math.sin(tt) * (amp * 0.55);
+      if (x === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+
+    ctx.globalAlpha = 1;
+    requestAnimationFrame(draw);
+  }
+
+  // init
+  resize();
+  window.addEventListener('resize', resize);
+  requestAnimationFrame(draw);
+
+  window.__wave_on_show = () => { 
+  resize(); 
+  requestAnimationFrame(t => draw(t)); 
+};
+})();
+
+function shortenWords(str){
+  if(!str || typeof str !== "string") return str;
+  const map = {
+    years:"y", year:"y",
+    months:"mo", month:"mo",
+    weeks:"w", week:"w",
+    days:"d", day:"d",
+    hours:"h", hour:"h",
+    minutes:"min", minute:"min",
+    seconds:"s", second:"s"
+  };
+  return str.replace(/\b([a-ząćęłńóśźż]+)\b/gi, (m)=>{
+    return map[m.toLowerCase()] ?? m;
+  });
+}
+
+
+
+// PERF badge
+const cpuTextPerf=document.getElementById('cpuText_perf');
+const ramTextPerf=document.getElementById('ramText_perf');
+if(cpuTextPerf) cpuTextPerf.textContent=`CPU: ${cpuSm.toFixed(0)}%`;
+if(ramTextPerf) ramTextPerf.textContent=`RAM: ${ramSm.toFixed(0)}%`;
+
+// PERF charts
+if(chartCpu_perf){
+  chartCpu_perf.data.labels.push(nowLabel);
+  chartCpu_perf.data.datasets[0].data.push(Number(cpuSm.toFixed(1)));
+  if(chartCpu_perf.data.labels.length>30){chartCpu_perf.data.labels.shift(); chartCpu_perf.data.datasets[0].data.shift();}
+  chartCpu_perf.update();
+}
+if(chartRam_perf){
+  chartRam_perf.data.labels.push(nowLabel);
+  chartRam_perf.data.datasets[0].data.push(Number(ramSm.toFixed(1)));
+  if(chartRam_perf.data.labels.length>30){chartRam_perf.data.labels.shift(); chartRam_perf.data.datasets[0].data.shift();}
+  chartRam_perf.update();
+}
+
+// Network (przepływy z różnic bajtów)
+        const rx=Number(data.net_down)||0;
+        const tx=Number(data.net_up)||0;
+        const ts=Date.now()/1000;
+        let downRate=0, upRate=0;
+        if(prevRx!==null && prevTx!==null && prevTs!==null){
+          const dt=Math.max(0.001, ts-prevTs);
+          downRate=Math.max(0,(rx-prevRx)/dt/1024);
+          upRate  =Math.max(0,(tx-prevTx)/dt/1024);
+        }
+        prevRx=rx; prevTx=tx; prevTs=ts;
+
+        const downText=document.getElementById('downText');
+        const upText  =document.getElementById('upText');
+        if(downText) downText.textContent=`Down: ${downRate.toFixed(1)} kB/s`;
+        if(upText)   upText.textContent  =`Up: ${upRate.toFixed(1)} kB/s`;
+        if(chartNet){
+          chartNet.data.labels.push(nowLabel);
+          chartNet.data.datasets[0].data.push(downRate);
+          chartNet.data.datasets[1].data.push(upRate);
+          if(chartNet.data.labels.length>30){chartNet.data.labels.shift(); chartNet.data.datasets.forEach(ds=>ds.data.shift());}
+          chartNet.update();
+        }
+
+        // PERF Network
+        const downTextPerf=document.getElementById('downText_perf');
+        const upTextPerf  =document.getElementById('upText_perf');
+        if(downTextPerf) downTextPerf.textContent=`Down: ${downRate.toFixed(1)} kB/s`;
+        if(upTextPerf)   upTextPerf.textContent  =`Up: ${upRate.toFixed(1)} kB/s`;
+        if(chartNet_perf){
+          chartNet_perf.data.labels.push(nowLabel);
+          chartNet_perf.data.datasets[0].data.push(downRate);
+          chartNet_perf.data.datasets[1].data.push(upRate);
+          if(chartNet_perf.data.labels.length>30){chartNet_perf.data.labels.shift(); chartNet_perf.data.datasets.forEach(ds=>ds.data.shift());}
+          chartNet_perf.update();
+        }
+
+        // Extra (Clock RB)
+const extra = document.getElementById("extra");
+if (extra) {
+  const uptimeShort = shortenWords(data.uptime);
+  extra.textContent =
+    `Uptime: ${uptimeShort}\n` +
+    `Disk: ${data.disk}\n` +
+    `Load: ${data.loadavg || "--"}\n` +
+    `Kernel: ${data.kernel || "--"}`;
+}
+
+        // GPU & Temps (PERF)
+        const gpu=Number(data.gpu_util ?? 0)||0;
+        const gpuTemp=Number(data.gpu_temp ?? 0)||0;
+        const cpuTemp=Number(data.cpu_temp ?? 0)||0;
+
+        const gpuTextPerf=document.getElementById('gpuText_perf');
+        const gpuTempPerf=document.getElementById('gpuTemp_perf');
+        const cpuTempPerf=document.getElementById('cpuTemp_perf');
+        if(gpuTextPerf) gpuTextPerf.textContent=`GPU: ${gpu}%`;
+        if(gpuTempPerf) gpuTempPerf.textContent=`GPU Temp: ${gpuTemp}°C`;
+        if(cpuTempPerf) cpuTempPerf.textContent=`CPU Temp: ${cpuTemp}°C`;
+
+        if(chartGpu_perf){
+          chartGpu_perf.data.labels.push(nowLabel);
+          chartGpu_perf.data.datasets[0].data.push(gpu);
+          chartGpu_perf.data.datasets[1].data.push(gpuTemp);
+          chartGpu_perf.data.datasets[2].data.push(cpuTemp);
+          if(chartGpu_perf.data.labels.length>30){chartGpu_perf.data.labels.shift(); chartGpu_perf.data.datasets.forEach(ds=>ds.data.shift());}
+          chartGpu_perf.update();
+        }
+      }catch(_){/* no-op */}
+    }
+    setInterval(fetchData,2000); fetchData();
+
+(function(){
+  const text1 = document.getElementById("mkText1");
+  const text2 = document.getElementById("mkText2");
+  if(!text1 || !text2) return;
+
+  // Kolejka morfowania – waluty
+  const texts = ["$", "€", "₿", "¥"];
+
+    const dyMap = {
+  '$': '-0.02em',
+  '€': '0em',
+  '₿': '-0.06em',
+  '¥': '-0.02em'
+};
+  // Czas (s)
+  const morphTime = 1.3;      // ile trwa jedno „przejście”
+  const cooldownTime = 1.2;  // chwila „odpoczynku” między przejściami
+
+  let textIndex = 0;
+  let time = new Date();
+  let morph = 0;
+  let cooldown = cooldownTime;
+
+  // stan początkowy
+  text1.textContent = texts[textIndex % texts.length];
+  text2.textContent = texts[(textIndex + 1) % texts.length];
+  applyDy(text1, text1.textContent);
+  applyDy(text2, text2.textContent);
+
+
+  function applyDy(el, ch){
+  el.style.setProperty('--mk-dy', dyMap[ch] || '0em');
+}
+
+  function setMorph(fraction){
+    // zabezpieczenie przed dzieleniem przez 0
+    const f = Math.max(0.0001, Math.min(1, fraction));
+    // rozmycie zależne od postępu (mniejsze wartości = mniej mleka)
+    const blurOut = Math.min(7 / (1 - f) - 7, 100);
+    const blurIn  = Math.min(7 / f - 7, 100);
+
+    // nowy (text2) się wyłania
+    text2.style.filter  = `blur(${blurIn}px)`;
+    text2.style.opacity = `${Math.pow(f, 0.45) * 100}%`;
+
+    // stary (text1) znika
+    const fOut = 1 - f;
+    text1.style.filter  = `blur(${blurOut}px)`;
+    text1.style.opacity = `${Math.pow(fOut, 0.45) * 100}%`;
+
+    // (opcjonalnie) mikro-deformacja dla „żywego” morphu:
+    text2.style.transform = `translate(-50%, -50%) scale(${0.94 + f*0.06})`;
+    text1.style.transform = `translate(-50%, -50%) scale(${1.06 - f*0.06})`;
+  }
+
+  function doMorph(){
+    morph -= cooldown;
+    cooldown = 0;
+    let fraction = morph / morphTime;
+    if (fraction > 1){
+      cooldown = cooldownTime;
+      fraction = 1;
+    }
+    setMorph(fraction);
+  }
+
+  function doCooldown(){
+    morph = 0;
+    // utrwal nowy stan: text2 w pełni, text1 przezroczysty
+    text2.style.filter  = "";
+    text2.style.opacity = "100%";
+    text1.style.filter  = "";
+    text1.style.opacity = "0%";
+  }
+
+  function animate(){
+    requestAnimationFrame(animate);
+    const newTime = new Date();
+    const dt = (newTime - time) / 1000;
+    time = newTime;
+
+    const shouldInc = cooldown > 0;
+    cooldown -= dt;
+
+    if (cooldown <= 0){
+      if (shouldInc){
+        // przeskocz do następnego symbolu
+        textIndex = (textIndex + 1) % texts.length;
+        text1.textContent = texts[textIndex % texts.length];
+        text2.textContent = texts[(textIndex + 1) % texts.length];
+        applyDy(text1, text1.textContent);
+        applyDy(text2, text2.textContent);
+      }
+      morph += dt;
+      doMorph();
+    } else {
+      doCooldown();
+    }
+  }
+
+  animate();
+})();
+
+/* SESSIONS: prosto — tylko zegary + stan (open/soon/closed) */
+(function(){
+  // Godziny sesji w CZASIE LOKALNYM RYNKU
+  const SESS = [
+    { id:'sess-tokyo',  tz:'Asia/Tokyo',       open:[9,0],  close:[15,0]  },
+    { id:'sess-london', tz:'Europe/London',    open:[8,0],  close:[16,30] },
+    { id:'sess-ny',     tz:'America/New_York', open:[9,30], close:[16,0]  }
+  ];
+
+  // bieżące części czasu w danej strefie
+  function nowParts(tz){
+    const p = Object.fromEntries(
+      new Intl.DateTimeFormat('en-CA',{
+        timeZone: tz, year:'numeric', month:'2-digit', day:'2-digit',
+        hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:false
+      }).formatToParts(new Date()).map(x=>[x.type,x.value])
+    );
+    return { y:+p.year, m:+p.month, d:+p.day, H:+p.hour, M:+p.minute, S:+p.second };
+  }
+
+  // format 24h w strefie rynku
+  function timeInTZ(tz){
+    return new Intl.DateTimeFormat('en-GB', {
+      timeZone: tz, hour:'2-digit', minute:'2-digit', hour12:false
+    }).format(new Date());
+  }
+
+  function update(){
+    SESS.forEach(({id, tz, open, close})=>{
+      const el = document.getElementById(id);
+      if (!el) return;
+
+      // zegar – aktualna godzina w tej strefie
+      const clock = el.querySelector('.clock');
+      if (clock) clock.textContent = timeInTZ(tz);
+
+      // stan sesji
+      const { H, M } = nowParts(tz);
+      const nowM   = H*60 + M;
+      const openM  = open[0]*60  + open[1];
+      const closeM = close[0]*60 + close[1];
+
+      let state;
+      if (nowM < openM || nowM >= closeM) {
+        state = 'closed';
+      } else {
+        // otwarte – sprawdź, czy ≤ 60 min do zamknięcia
+        state = (closeM - nowM) <= 60 ? 'soon' : 'open';
+      }
+
+      el.classList.remove('open','soon','closed');
+      el.classList.add(state);
+    });
+  }
+
+  update();
+  setInterval(update, 20*1000);
+})();
+
+/* Stocks Ticker (wolniejszy) – statyczna lista indeksów dla klimatu.
+   Chcesz live? Podłączymy później API i tylko podmienimy źródło danych. */
+(function(){
+  const TRACK_ID = 'stk-track';
+
+  // Zestaw startowy: symbol, opis, cena, zmiana %
+  // (możesz podmienić wartości – to tylko „seed” do vibe'u)
+  const SEED = [
+    { sym:'NIKKEI 225', desc:'Tokyo',  price: 39220.98, chg:+0.42 },
+    { sym:'HANG SENG',  desc:'HK',     price: 17836.12, chg:-0.31 },
+    { sym:'FTSE 100',   desc:'London', price: 8482.77,  chg:+0.15 },
+    { sym:'DAX',        desc:'Frankfurt', price: 18392.54, chg:-0.12 },
+    { sym:'CAC 40',     desc:'Paris',  price: 7673.21,  chg:+0.06 },
+    { sym:'S&P 500',    desc:'NY',     price: 5556.44,  chg:+0.08 },
+    { sym:'NASDAQ 100', desc:'NY',     price: 19832.11, chg:-0.05 },
+    { sym:'WIG20',      desc:'Warsaw', price: 2466.78,  chg:+0.23 }
+  ];
+
+  // formattery
+  const fmtPrice = v => {
+    if (v >= 10000) return v.toLocaleString(undefined, {maximumFractionDigits:0});
+    return v.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2});
+  };
+  const fmtPct = v => `${(v>=0?'+':'')}${Math.abs(v).toFixed(2)}%`;
+
+  // render do toru
+  function buildTickerRowTo(trackId, items){
+    const track = document.getElementById(trackId);
+    if (!track) return;
+    track.innerHTML = '';
+
+    // Zrób pętlę 2x, żeby tor był długi i płynny
+    const twice = items.concat(items);
+    twice.forEach(it=>{
+      const span = document.createElement('span');
+      const state = it.chg > 0 ? 'up' : it.chg < 0 ? 'down' : 'flat';
+      span.className = `stk-item ${state}`;
+      span.innerHTML = `
+        <span class="stk-sym">${it.sym}</span>
+        <span class="stk-price">${fmtPrice(it.price)}</span>
+        <span class="stk-chg">${it.chg>0?'▲':it.chg<0?'▼':'▬'} ${fmtPct(it.chg)}</span>
+      `;
+      track.appendChild(span);
+    });
+  }
+
+  // mały „oddech” co kilka minut: losowo porusz lekko wartości, by nie było totalnie sztywno
+  function drift(items){
+    return items.map(it=>{
+      const nudge = (Math.random()-0.5)*0.12;   // +/- 0.06pp
+      const chg = Math.max(-9.99, Math.min(9.99, it.chg + nudge));
+      const price = Math.max(1, it.price * (1 + chg/100 * 0.003)); // mikro wpływ na cenę
+      return {...it, chg: Math.round(chg*100)/100, price};
+    });
+  }
+
+  // pierwszy render
+  buildTickerRowTo(TRACK_ID, SEED);
+
+  // co 5 minut – lekko „porusz” wartości (vibe, nie dane real-time)
+  setInterval(()=>{
+    const next = drift(SEED);
+    buildTickerRowTo(TRACK_ID, next);
+  }, 5*60*1000);
+})();
+  </script>
+  <svg width="0" height="0" style="position:absolute">
+  <defs>
+    <!-- Threshold do „sklejania” pikseli po blurze -->
+<filter id="mkThreshold"
+        x="-25%" y="-25%" width="150%" height="150%"
+        color-interpolation-filters="sRGB">
+  <feColorMatrix in="SourceGraphic" type="matrix"
+    values="
+      1 0 0 0 0
+      0 1 0 0 0
+      0 0 1 0 0
+      0 0 0 255 -180"/>
+</filter>
+  </defs>
+</svg>
+</body>
+</html>

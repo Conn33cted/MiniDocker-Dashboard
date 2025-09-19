@@ -1,0 +1,5 @@
+dashboard/vis.json
+dashboard/stats.json
+dashboard/nowplaying.json
+*.log
+nohup.out

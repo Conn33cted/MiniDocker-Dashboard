@@ -2,6 +2,9 @@
 <html lang="pl">
 <head>
   <meta charset="UTF-8" />
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
   <title>Dashboard</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -1683,6 +1686,98 @@ if (extra) {
     buildTickerRowTo(TRACK_ID, next);
   }, 5*60*1000);
 })();
+
+// ====== FEEDS: cache-busting + stabilne pollowanie ======
+const bust = () => '?t=' + Date.now();
+
+async function safeJSON(url){
+  const r = await fetch(url + bust(), { cache: 'no-store' });
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  return r.json();
+}
+
+// ---- NOW PLAYING ----
+async function fetchNow(){
+  try{
+    const j = await safeJSON('nowplaying.json');
+    // wymagamy przynajmniej znacznika czasu (zabezpiecza „stare” pliki)
+    // jeśli Twój exporter nie dodaje t, po prostu usuń ten warunek
+    if (j && typeof j === 'object'){
+      // PRZYKŁAD: dopasuj do swoich ID / klas
+      const t = document.getElementById('np-title');
+      const a = document.getElementById('np-artist');
+      const al= document.getElementById('np-album');
+      const art = document.getElementById('np-art'); // <img> okładki (jeśli masz)
+      if (t && j.title)  t.textContent = j.title;
+      if (a && j.artist) a.textContent = j.artist;
+      if (al && j.album) al.textContent = j.album;
+      if (art && j.artUrl) {
+        // cache-bust też obrazek — stare okładki lubią się kleić
+        art.src = j.artUrl + bust();
+      }
+    }
+  }catch(e){
+    // cicho — kiosk
+  }
+}
+
+// ---- STATS (CPU/RAM/NET/GPU) ----
+async function fetchStats(){
+  try{
+    const s = await safeJSON('stats.json');
+    // PRZYKŁAD: zaktualizuj DOM; dopasuj do swoich selektorów
+    // CPU %
+    const cpu = document.getElementById('stat-cpu');
+    if (cpu && s?.cpu?.pct != null) cpu.textContent = (s.cpu.pct).toFixed(0) + '%';
+    // RAM %
+    const ram = document.getElementById('stat-ram');
+    if (ram && s?.ram?.pct != null) ram.textContent = (s.ram.pct).toFixed(0) + '%';
+    // NET (kbps / Mbps)
+    const dn = document.getElementById('stat-net-down');
+    const up = document.getElementById('stat-net-up');
+    if (dn && s?.net?.down_kbps != null) dn.textContent = (s.net.down_kbps/1000).toFixed(2) + ' Mbps';
+    if (up && s?.net?.up_kbps != null)   up.textContent = (s.net.up_kbps/1000).toFixed(2) + ' Mbps';
+    // GPU/TEMP – analogicznie, wg Twojego JSON-a
+    // ... + podbij tu swoje mikrowykresy pushSpark/redrawSparks jeśli ich używasz
+  }catch(e){
+    // cicho
+  }
+}
+
+// ---- VIS (wizualizer) ----
+async function fetchVis(){
+  try{
+    const v = await safeJSON('vis.json');
+    // oczekujemy { t: epoch, energy: float, bands: [...] }
+    if (!v || !Array.isArray(v.bands)) return;
+    // PRZYKŁAD: narysuj (podmień to na Twoje API rysujące)
+    if (typeof window.drawVis === 'function'){
+      window.drawVis(v.bands);
+    }
+  }catch(e){
+    // cicho
+  }
+}
+
+// ---- PĘTLE ----
+// W miarę lekkie interwały — nie rób tego co 16 ms ;)
+let feedsStarted = false;
+function startFeeds(){
+  if (feedsStarted) return;
+  feedsStarted = true;
+  fetchStats();         // prefetch
+  fetchNow();
+  fetchVis();
+
+  setInterval(fetchStats, 1500);
+  setInterval(fetchNow,   1500);
+  setInterval(fetchVis,    200); // wizualizer gęściej
+}
+
+// jeśli masz gdzieś „pause on hidden”, usuń to lub wymuś start
+document.addEventListener('DOMContentLoaded', startFeeds);
+startFeeds(); // na wszelki wypadek
+
   </script>
   <svg width="0" height="0" style="position:absolute">
   <defs>

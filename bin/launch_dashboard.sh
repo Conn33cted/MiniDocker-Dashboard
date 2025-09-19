@@ -1,17 +1,27 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-HTML="file:///home/anti/dashboard/index.html"
-PROFILE_DIR="/home/anti/.cache/dashboard-chromium"
-W=960; H=640
+# === ŚCIEŻKI ===
+PROFILE_DIR="$HOME/.cache/dashboard-chromium"
 
-# 0) Współrzędne małego monitora (po rozdzielczości 960/640)
+# Auto-wybór index.html (repo → symlink)
+if   [[ -f "$HOME/dashboard-project/dashboard/index.html" ]]; then
+  HTML="file://$HOME/dashboard-project/dashboard/index.html"
+elif [[ -f "$HOME/dashboard/index.html" ]]; then
+  HTML="file://$HOME/dashboard/index.html"
+else
+  echo "ERROR: Nie znalazłem index.html ani w ~/dashboard-project/dashboard ani w ~/dashboard" >&2
+  exit 1
+fi
+
+# === ROZMIAR/POZYCJA OKNA ===
+W=960; H=640
+# Szukamy monitora 960/640 (dopasuj jeśli inny)
 line="$(xrandr --listmonitors | grep -E ' 960/.*640' || true)"
 read -r X Y <<<"$(sed -E 's/.*\+([0-9]+)\+([0-9]+)/\1 \2/' <<<"${line:-+0+0}" | awk '{print $1, $2}')"
 
-# 1) Przygotuj profil z wyłączonym tłumaczeniem (Preferences & Local State)
+# === PROFIL CHROMIUM (wyłączone tłumaczenie) ===
 mkdir -p "$PROFILE_DIR/Default" "$PROFILE_DIR/Crashpad" "$PROFILE_DIR/cache"
-# Preferences (w katalogu Default/)
 cat > "$PROFILE_DIR/Default/Preferences" <<'JSON'
 {
   "intl": {"accept_languages":"pl-PL,pl"},
@@ -19,7 +29,6 @@ cat > "$PROFILE_DIR/Default/Preferences" <<'JSON'
   "profile":{"exit_type":"None"}
 }
 JSON
-# Local State (w katalogu profilu głównego)
 cat > "$PROFILE_DIR/Local State" <<'JSON'
 {
   "accept_languages": "pl-PL,pl",
@@ -28,30 +37,22 @@ cat > "$PROFILE_DIR/Local State" <<'JSON'
 }
 JSON
 
-# 1,5) Start exporter stats.json (restart jeśli był już uruchomiony)
-pkill -f dashboard_stats.sh || true
-"$HOME/bin/dashboard_stats.sh" &
+# === EXPORTERY (pojedyncze uruchomienia, bez duplikatów) ===
+pkill -f dashboard_stats.sh      2>/dev/null || true
+pkill -f nowplaying_export.sh    2>/dev/null || true
 
-# --- START exporterów (przed chromium) ---
-pkill -f dashboard_stats.sh 2>/dev/null || true
-pkill -f nowplaying_export.sh 2>/dev/null || true
-"$HOME/bin/dashboard_stats.sh" & disown
-"$HOME/bin/nowplaying_export.sh" & disown
-# --- KONIEC sekcji exporterów ---
+# Jeśli masz symlinki do ~/bin/… to działają; jeśli nie – podmień na ~/dashboard-project/bin/…
+"$HOME/bin/dashboard_stats.sh"    >/dev/null 2>&1 & disown
+"$HOME/bin/nowplaying_export.sh"  >/dev/null 2>&1 & disown
 
-# --- NOW PLAYING exporter (Spotify only) ---
-NP_PIDFILE="/tmp/nowplaying.pid"
-# zabij stary, jeśli był
-if [[ -f "$NP_PIDFILE" ]]; then
-  kill "$(cat "$NP_PIDFILE")" 2>/dev/null || true
-  rm -f "$NP_PIDFILE"
-fi
-# odpal pętlę w tle
-( while true; do ~/bin/nowplaying_export.sh; sleep 1; done ) >/dev/null 2>&1 &
-echo $! > "$NP_PIDFILE"
+# (opcjonalnie) jeśli exporter NowPlaying nie ma własnej pętli w środku, a chcesz watchdog,
+# odkomentuj te linie i skasuj powyższe jedno-shoty:
+# NP_PIDFILE="/tmp/nowplaying.pid"
+# [[ -f "$NP_PIDFILE" ]] && { kill "$(cat "$NP_PIDFILE")" 2>/dev/null || true; rm -f "$NP_PIDFILE"; }
+# ( while true; do "$HOME/bin/nowplaying_export.sh"; sleep 1; done ) >/dev/null 2>&1 &
+# echo $! > "$NP_PIDFILE"
 
-
-# 2) Odpal Chromium jako osobna instancja z unikalną klasą i profilem
+# === START CHROMIUM (app window) ===
 chromium \
   --app="$HTML" \
   --class=DashboardApp \
@@ -74,7 +75,7 @@ chromium \
 PID=$!
 echo "$PID" > /tmp/dashboard.pid
 
-# 3) Po utworzeniu okna: ustaw pozycję/rozmiar i ukryj z paska (z retry)
+# === DOSTRAJANIE OKNA (po starcie)
 if command -v xdotool >/dev/null 2>&1 && command -v wmctrl >/dev/null 2>&1; then
   for i in {1..15}; do
     sleep 0.2
@@ -87,5 +88,10 @@ if command -v xdotool >/dev/null 2>&1 && command -v wmctrl >/dev/null 2>&1; then
   done
 fi
 
-# 4) Uruchom devilspie2 (jeśli nie działa) - pilnuje flag okna na wszelki wypadek
+# === DEVILSPIE2 (opcjonalny strażnik)
 pgrep -x devilspie2 >/dev/null || devilspie2 & disown
+
+# --- NOW PLAYING exporter watchdog ---
+pkill -f nowplaying_export.sh 2>/dev/null || true
+nohup bash -c 'while true; do "$HOME/dashboard-project/bin/nowplaying_export.sh"; sleep 1; done' \
+  >/tmp/np.log 2>&1 & disown

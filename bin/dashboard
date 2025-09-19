@@ -1,0 +1,85 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+LAUNCH="$HOME/bin/launch_dashboard.sh"
+STOP="$HOME/bin/stop_dashboard.sh"
+PROFILE_DIR="$HOME/.cache/dashboard-chromium"
+
+usage() {
+  cat <<'EOF'
+Usage: dashboard <command>
+
+Commands:
+  start            Start dashboard
+  stop             Stop dashboard
+  restart          Restart dashboard
+  toggle           Toggle start/stop
+  status           Show if running
+  help, --help     This help
+
+Tabs / control:
+  tab next         Switch to next tab
+  tab prev         Switch to previous tab
+  tab <name>       Switch to tab by name (clock|sys|net|now)
+  reload           Hard reload page
+  focus            Focus dashboard window (bring to front)
+
+Notes:
+- Works independently of terminal (detached).
+- Uses dedicated Chromium profile: ~/.cache/dashboard-chromium
+EOF
+}
+
+is_running() { pgrep -f -- "--user-data-dir=${PROFILE_DIR}" >/dev/null 2>&1; }
+
+start() {
+  is_running && { echo "dashboard: already running"; exit 0; }
+  if command -v setsid >/dev/null 2>&1; then
+    setsid -f "$LAUNCH" >/dev/null 2>&1 || true
+  else
+    nohup "$LAUNCH" >/dev/null 2>&1 & disown || true
+  fi
+  echo "dashboard: started"
+}
+
+stop() { "$STOP" >/dev/null 2>&1 || true; echo "dashboard: stopped"; }
+
+status() { is_running && echo "dashboard: running" || echo "dashboard: not running"; }
+
+# --- Window helpers ---
+wid() { xdotool search --class 'DashboardApp' | head -n1; }
+
+focus() { local w; w="$(wid || true)"; [[ -n "${w:-}" ]] && xdotool windowactivate "$w"; }
+
+send_keys() {
+  local seq="$1"; local w; w="$(wid || true)"; [[ -n "${w:-}" ]] && xdotool key --window "$w" $seq;
+}
+
+reload() { send_keys "ctrl+r"; }
+
+tab_cmd() {
+  local sub="${1:-}"
+  case "$sub" in
+    next) send_keys "Ctrl+Right" ;;
+    prev) send_keys "Ctrl+Left"  ;;
+    clock) send_keys "Alt+1" ;;
+    sys)   send_keys "Alt+2" ;;
+    net)   send_keys "Alt+3" ;;
+    now)   send_keys "Alt+4" ;;
+    *) echo "Usage: dashboard tab {next|prev|clock|sys|net|now}"; exit 1 ;;
+  esac
+}
+
+cmd="${1:-help}"
+case "$cmd" in
+  start) start ;;
+  stop) stop ;;
+  restart) stop; start ;;
+  toggle) is_running && stop || start ;;
+  status) status ;;
+  focus)  focus ;;
+  reload) reload ;;
+  tab)    shift; tab_cmd "${1:-}" ;;
+  help|--help|-h) usage ;;
+  *) usage; exit 1 ;;
+esac

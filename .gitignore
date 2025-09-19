@@ -1,8 +1,20 @@
-dashboard/vis.json
-dashboard/stats.json
-dashboard/nowplaying.json
-*.log
-nohup.out
+# Runtime JSON (generowane przez eksportery)
 dashboard/*.json
+
+# Logi procesów
+*.log
+
+# Cache Chromium
 .cache/
+
+# Virtualenv dla Pythona
 vis-venv/
+
+# Pliki systemowe edytorów
+*~
+*.swp
+.DS_Store
+Thumbs.db
+
+# Backupy nano/vim
+*.save

@@ -276,7 +276,7 @@
 
   async function updateSun(){
   try{
-    const lat = 50.3568, lon = 20.0274;
+    const lat = 52.229771, lon = 21.011780; // wschód/zachód słońca - koordynaty
     const r = await fetch(`https://api.sunrise-sunset.org/json?lat=${lat}&lng=${lon}&formatted=0`);
     const d = await r.json();
     if(!d.results) return;
